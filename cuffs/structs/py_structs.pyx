@@ -1,3 +1,7 @@
+from cpython cimport array
+import numpy as np
+cimport numpy as np
+
 cdef extern from "c_struct.c":
     ctypedef struct spectralData:
         float* v0
@@ -57,6 +61,8 @@ cdef extern from "c_struct.c":
 
         # Block data:
         blockData blocks[4096] 
+    
+    spectralData init_spectralData()
 
 
 # # Then we describe a class that has a Point member "pt"
@@ -64,6 +70,7 @@ cdef class py_spectralData:
     cdef spectralData sd
 
     def __init__(self):
+        self.sd = init_spectralData()
         self.sd.v0 = NULL
         self.sd.da = NULL
         self.sd.S0 = NULL
@@ -72,15 +79,15 @@ cdef class py_spectralData:
         self.sd.na = NULL
         self.sd.log_2gs = NULL
 
-    @property
-    def v0(self):
-        return self.sd.v0
-
-
     @v0.setter
     def v0(self,val):
-        self.sd.v0 = val
+    #    cdef float* v0_ptr = <float*> val.data
+        self.sd.v0 = <float *> val.data
     
+    # @property
+    # def v0(self):
+    #     cdef float* v0_ptr = <float*> self.sd.v0.data
+    #     return v0_ptr
 
 cdef extern from "point.c":
     ctypedef struct Point:
@@ -97,16 +104,16 @@ cdef class PyPoint:
      # define properties in the normal Python way
     @property
     def x(self):
-        return self.pt.x
+        return self.p.x
 
     @x.setter
     def x(self,val):
-        self.pt.x = val
+        self.p.x = val
 
-    @property
-    def y(self):
-        return self.pt.y
+    # @property
+    # def y(self):
+    #     return self.pt.y
 
-    @y.setter
-    def y(self,val):
-        self.pt.y = val
+    # @y.setter
+    # def y(self,val):
+    #     self.pt.y = val

@@ -71,3 +71,8 @@ typedef struct{
 	//Block data:
 	blockData blocks[4096];//4096
 } iterData ;
+
+spectralData init_spectralData(){
+	spectralData spec_h;
+	return spec_h;
+}

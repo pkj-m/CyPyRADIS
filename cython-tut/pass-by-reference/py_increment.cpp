@@ -634,8 +634,8 @@ static CYTHON_INLINE float __PYX_NAN() {
     #include<iostream>
     #include<vector>
     using namespace std;
-    void add_one(vector<double> &v_in, vector<double> &v_out){
-        int n = v_in.size();
+    void add_one(double *v_in, double *v_out, int n){
+        //int n = v_in.size();
         //v_out = (double *)malloc(n * sizeof(double));
         for (int i = 0; i < n; i++){
             v_out[i] = v_in[i] + 1;
@@ -875,7 +875,6 @@ static const char *__pyx_filename;
 static const char *__pyx_f[] = {
   "py_increment.pyx",
   "__init__.pxd",
-  "stringsource",
   "type.pxd",
 };
 /* BufferFormatStructs.proto */
@@ -1269,6 +1268,10 @@ static CYTHON_INLINE void __Pyx_SafeReleaseBuffer(Py_buffer* info);
 static Py_ssize_t __Pyx_minusones[] = { -1, -1, -1, -1, -1, -1, -1, -1 };
 static Py_ssize_t __Pyx_zeros[] = { 0, 0, 0, 0, 0, 0, 0, 0 };
 
+/* BufferIndexError.proto */
+static void __Pyx_RaiseBufferIndexError(int axis);
+
+#define __Pyx_BufPtrCContig1d(type, buf, i0, s0) ((type)buf + i0)
 /* PyThreadStateGet.proto */
 #if CYTHON_FAST_THREAD_STATE
 #define __Pyx_PyThreadState_declare  PyThreadState *__pyx_tstate;
@@ -1672,7 +1675,6 @@ static CYTHON_INLINE char *__pyx_f_5numpy__util_dtypestring(PyArray_Descr *, cha
 /* Module declarations from 'libcpp.vector' */
 
 /* Module declarations from 'py_increment' */
-static std::vector<double>  __pyx_convert_vector_from_py_double(PyObject *); /*proto*/
 static __Pyx_TypeInfo __Pyx_TypeInfo_double = { "double", NULL, sizeof(double), { 0 }, 0, 'R', 0, 0 };
 #define __Pyx_MODULE_NAME "py_increment"
 extern int __pyx_module_is_main_py_increment;
@@ -1683,6 +1685,7 @@ static PyObject *__pyx_builtin_ValueError;
 static PyObject *__pyx_builtin_range;
 static PyObject *__pyx_builtin_RuntimeError;
 static PyObject *__pyx_builtin_ImportError;
+static const char __pyx_k_n[] = "n";
 static const char __pyx_k_np[] = "np";
 static const char __pyx_k_inc[] = "inc";
 static const char __pyx_k_main[] = "__main__";
@@ -1693,6 +1696,8 @@ static const char __pyx_k_numpy[] = "numpy";
 static const char __pyx_k_range[] = "range";
 static const char __pyx_k_v_out[] = "v_out";
 static const char __pyx_k_import[] = "__import__";
+static const char __pyx_k_ptr_vin[] = "ptr_vin";
+static const char __pyx_k_ptr_vout[] = "ptr_vout";
 static const char __pyx_k_ValueError[] = "ValueError";
 static const char __pyx_k_ImportError[] = "ImportError";
 static const char __pyx_k_RuntimeError[] = "RuntimeError";
@@ -1717,6 +1722,7 @@ static PyObject *__pyx_n_s_cline_in_traceback;
 static PyObject *__pyx_n_s_import;
 static PyObject *__pyx_n_s_inc;
 static PyObject *__pyx_n_s_main;
+static PyObject *__pyx_n_s_n;
 static PyObject *__pyx_n_s_name;
 static PyObject *__pyx_kp_u_ndarray_is_not_C_contiguous;
 static PyObject *__pyx_kp_u_ndarray_is_not_Fortran_contiguou;
@@ -1724,6 +1730,8 @@ static PyObject *__pyx_n_s_np;
 static PyObject *__pyx_n_s_numpy;
 static PyObject *__pyx_kp_s_numpy_core_multiarray_failed_to;
 static PyObject *__pyx_kp_s_numpy_core_umath_failed_to_impor;
+static PyObject *__pyx_n_s_ptr_vin;
+static PyObject *__pyx_n_s_ptr_vout;
 static PyObject *__pyx_n_s_py_increment;
 static PyObject *__pyx_kp_s_py_increment_pyx;
 static PyObject *__pyx_n_s_range;
@@ -1750,7 +1758,7 @@ static PyObject *__pyx_codeobj__9;
  * # input is vin and vout, numpy array
  * def inc(np.ndarray[double, ndim=1, mode="c"] v_in,             # <<<<<<<<<<<<<<
  *         np.ndarray[double, ndim=1, mode="c"] v_out):
- *     add_one(v_in, v_out)
+ *     # add_one(v_in, v_out)
  */
 
 /* Python wrapper */
@@ -1822,14 +1830,19 @@ static PyObject *__pyx_pw_12py_increment_1inc(PyObject *__pyx_self, PyObject *__
 }
 
 static PyObject *__pyx_pf_12py_increment_inc(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_v_in, PyArrayObject *__pyx_v_v_out) {
+  int __pyx_v_n;
+  double *__pyx_v_ptr_vin;
+  double *__pyx_v_ptr_vout;
   __Pyx_LocalBuf_ND __pyx_pybuffernd_v_in;
   __Pyx_Buffer __pyx_pybuffer_v_in;
   __Pyx_LocalBuf_ND __pyx_pybuffernd_v_out;
   __Pyx_Buffer __pyx_pybuffer_v_out;
   PyObject *__pyx_r = NULL;
   __Pyx_RefNannyDeclarations
-  std::vector<double>  __pyx_t_1;
-  std::vector<double>  __pyx_t_2;
+  Py_ssize_t __pyx_t_1;
+  Py_ssize_t __pyx_t_2;
+  int __pyx_t_3;
+  Py_ssize_t __pyx_t_4;
   __Pyx_RefNannySetupContext("inc", 0);
   __pyx_pybuffer_v_in.pybuffer.buf = NULL;
   __pyx_pybuffer_v_in.refcount = 0;
@@ -1850,23 +1863,66 @@ static PyObject *__pyx_pf_12py_increment_inc(CYTHON_UNUSED PyObject *__pyx_self,
   }
   __pyx_pybuffernd_v_out.diminfo[0].strides = __pyx_pybuffernd_v_out.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_v_out.diminfo[0].shape = __pyx_pybuffernd_v_out.rcbuffer->pybuffer.shape[0];
 
-  /* "py_increment.pyx":27
- * def inc(np.ndarray[double, ndim=1, mode="c"] v_in,
+  /* "py_increment.pyx":28
  *         np.ndarray[double, ndim=1, mode="c"] v_out):
- *     add_one(v_in, v_out)             # <<<<<<<<<<<<<<
- *     # cdef int n = len(v_in)
+ *     # add_one(v_in, v_out)
+ *     cdef int n = len(v_in)             # <<<<<<<<<<<<<<
  * 
+ *     cdef double *ptr_vin = &v_in[0]
  */
-  __pyx_t_1 = __pyx_convert_vector_from_py_double(((PyObject *)__pyx_v_v_in)); if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 27, __pyx_L1_error)
-  __pyx_t_2 = __pyx_convert_vector_from_py_double(((PyObject *)__pyx_v_v_out)); if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 27, __pyx_L1_error)
-  add_one(__pyx_t_1, __pyx_t_2);
+  __pyx_t_1 = PyObject_Length(((PyObject *)__pyx_v_v_in)); if (unlikely(__pyx_t_1 == ((Py_ssize_t)-1))) __PYX_ERR(0, 28, __pyx_L1_error)
+  __pyx_v_n = __pyx_t_1;
+
+  /* "py_increment.pyx":30
+ *     cdef int n = len(v_in)
+ * 
+ *     cdef double *ptr_vin = &v_in[0]             # <<<<<<<<<<<<<<
+ *     cdef double *ptr_vout = &v_out[0]
+ *     add_one(ptr_vin, ptr_vout, n)
+ */
+  __pyx_t_2 = 0;
+  __pyx_t_3 = -1;
+  if (__pyx_t_2 < 0) {
+    __pyx_t_2 += __pyx_pybuffernd_v_in.diminfo[0].shape;
+    if (unlikely(__pyx_t_2 < 0)) __pyx_t_3 = 0;
+  } else if (unlikely(__pyx_t_2 >= __pyx_pybuffernd_v_in.diminfo[0].shape)) __pyx_t_3 = 0;
+  if (unlikely(__pyx_t_3 != -1)) {
+    __Pyx_RaiseBufferIndexError(__pyx_t_3);
+    __PYX_ERR(0, 30, __pyx_L1_error)
+  }
+  __pyx_v_ptr_vin = (&(*__Pyx_BufPtrCContig1d(double *, __pyx_pybuffernd_v_in.rcbuffer->pybuffer.buf, __pyx_t_2, __pyx_pybuffernd_v_in.diminfo[0].strides)));
+
+  /* "py_increment.pyx":31
+ * 
+ *     cdef double *ptr_vin = &v_in[0]
+ *     cdef double *ptr_vout = &v_out[0]             # <<<<<<<<<<<<<<
+ *     add_one(ptr_vin, ptr_vout, n)
+ */
+  __pyx_t_4 = 0;
+  __pyx_t_3 = -1;
+  if (__pyx_t_4 < 0) {
+    __pyx_t_4 += __pyx_pybuffernd_v_out.diminfo[0].shape;
+    if (unlikely(__pyx_t_4 < 0)) __pyx_t_3 = 0;
+  } else if (unlikely(__pyx_t_4 >= __pyx_pybuffernd_v_out.diminfo[0].shape)) __pyx_t_3 = 0;
+  if (unlikely(__pyx_t_3 != -1)) {
+    __Pyx_RaiseBufferIndexError(__pyx_t_3);
+    __PYX_ERR(0, 31, __pyx_L1_error)
+  }
+  __pyx_v_ptr_vout = (&(*__Pyx_BufPtrCContig1d(double *, __pyx_pybuffernd_v_out.rcbuffer->pybuffer.buf, __pyx_t_4, __pyx_pybuffernd_v_out.diminfo[0].strides)));
+
+  /* "py_increment.pyx":32
+ *     cdef double *ptr_vin = &v_in[0]
+ *     cdef double *ptr_vout = &v_out[0]
+ *     add_one(ptr_vin, ptr_vout, n)             # <<<<<<<<<<<<<<
+ */
+  add_one(__pyx_v_ptr_vin, __pyx_v_ptr_vout, __pyx_v_n);
 
   /* "py_increment.pyx":25
  * 
  * # input is vin and vout, numpy array
  * def inc(np.ndarray[double, ndim=1, mode="c"] v_in,             # <<<<<<<<<<<<<<
  *         np.ndarray[double, ndim=1, mode="c"] v_out):
- *     add_one(v_in, v_out)
+ *     # add_one(v_in, v_out)
  */
 
   /* function exit code */
@@ -4310,125 +4366,6 @@ static CYTHON_INLINE int __pyx_f_5numpy_import_ufunc(void) {
   return __pyx_r;
 }
 
-/* "vector.from_py":45
- * 
- * @cname("__pyx_convert_vector_from_py_double")
- * cdef vector[X] __pyx_convert_vector_from_py_double(object o) except *:             # <<<<<<<<<<<<<<
- *     cdef vector[X] v
- *     for item in o:
- */
-
-static std::vector<double>  __pyx_convert_vector_from_py_double(PyObject *__pyx_v_o) {
-  std::vector<double>  __pyx_v_v;
-  PyObject *__pyx_v_item = NULL;
-  std::vector<double>  __pyx_r;
-  __Pyx_RefNannyDeclarations
-  PyObject *__pyx_t_1 = NULL;
-  Py_ssize_t __pyx_t_2;
-  PyObject *(*__pyx_t_3)(PyObject *);
-  PyObject *__pyx_t_4 = NULL;
-  double __pyx_t_5;
-  __Pyx_RefNannySetupContext("__pyx_convert_vector_from_py_double", 0);
-
-  /* "vector.from_py":47
- * cdef vector[X] __pyx_convert_vector_from_py_double(object o) except *:
- *     cdef vector[X] v
- *     for item in o:             # <<<<<<<<<<<<<<
- *         v.push_back(<X>item)
- *     return v
- */
-  if (likely(PyList_CheckExact(__pyx_v_o)) || PyTuple_CheckExact(__pyx_v_o)) {
-    __pyx_t_1 = __pyx_v_o; __Pyx_INCREF(__pyx_t_1); __pyx_t_2 = 0;
-    __pyx_t_3 = NULL;
-  } else {
-    __pyx_t_2 = -1; __pyx_t_1 = PyObject_GetIter(__pyx_v_o); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 47, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_1);
-    __pyx_t_3 = Py_TYPE(__pyx_t_1)->tp_iternext; if (unlikely(!__pyx_t_3)) __PYX_ERR(2, 47, __pyx_L1_error)
-  }
-  for (;;) {
-    if (likely(!__pyx_t_3)) {
-      if (likely(PyList_CheckExact(__pyx_t_1))) {
-        if (__pyx_t_2 >= PyList_GET_SIZE(__pyx_t_1)) break;
-        #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
-        __pyx_t_4 = PyList_GET_ITEM(__pyx_t_1, __pyx_t_2); __Pyx_INCREF(__pyx_t_4); __pyx_t_2++; if (unlikely(0 < 0)) __PYX_ERR(2, 47, __pyx_L1_error)
-        #else
-        __pyx_t_4 = PySequence_ITEM(__pyx_t_1, __pyx_t_2); __pyx_t_2++; if (unlikely(!__pyx_t_4)) __PYX_ERR(2, 47, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_4);
-        #endif
-      } else {
-        if (__pyx_t_2 >= PyTuple_GET_SIZE(__pyx_t_1)) break;
-        #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
-        __pyx_t_4 = PyTuple_GET_ITEM(__pyx_t_1, __pyx_t_2); __Pyx_INCREF(__pyx_t_4); __pyx_t_2++; if (unlikely(0 < 0)) __PYX_ERR(2, 47, __pyx_L1_error)
-        #else
-        __pyx_t_4 = PySequence_ITEM(__pyx_t_1, __pyx_t_2); __pyx_t_2++; if (unlikely(!__pyx_t_4)) __PYX_ERR(2, 47, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_4);
-        #endif
-      }
-    } else {
-      __pyx_t_4 = __pyx_t_3(__pyx_t_1);
-      if (unlikely(!__pyx_t_4)) {
-        PyObject* exc_type = PyErr_Occurred();
-        if (exc_type) {
-          if (likely(__Pyx_PyErr_GivenExceptionMatches(exc_type, PyExc_StopIteration))) PyErr_Clear();
-          else __PYX_ERR(2, 47, __pyx_L1_error)
-        }
-        break;
-      }
-      __Pyx_GOTREF(__pyx_t_4);
-    }
-    __Pyx_XDECREF_SET(__pyx_v_item, __pyx_t_4);
-    __pyx_t_4 = 0;
-
-    /* "vector.from_py":48
- *     cdef vector[X] v
- *     for item in o:
- *         v.push_back(<X>item)             # <<<<<<<<<<<<<<
- *     return v
- * 
- */
-    __pyx_t_5 = __pyx_PyFloat_AsDouble(__pyx_v_item); if (unlikely((__pyx_t_5 == (double)-1) && PyErr_Occurred())) __PYX_ERR(2, 48, __pyx_L1_error)
-    __pyx_v_v.push_back(((double)__pyx_t_5));
-
-    /* "vector.from_py":47
- * cdef vector[X] __pyx_convert_vector_from_py_double(object o) except *:
- *     cdef vector[X] v
- *     for item in o:             # <<<<<<<<<<<<<<
- *         v.push_back(<X>item)
- *     return v
- */
-  }
-  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-
-  /* "vector.from_py":49
- *     for item in o:
- *         v.push_back(<X>item)
- *     return v             # <<<<<<<<<<<<<<
- * 
- * 
- */
-  __pyx_r = __pyx_v_v;
-  goto __pyx_L0;
-
-  /* "vector.from_py":45
- * 
- * @cname("__pyx_convert_vector_from_py_double")
- * cdef vector[X] __pyx_convert_vector_from_py_double(object o) except *:             # <<<<<<<<<<<<<<
- *     cdef vector[X] v
- *     for item in o:
- */
-
-  /* function exit code */
-  __pyx_L1_error:;
-  __Pyx_XDECREF(__pyx_t_1);
-  __Pyx_XDECREF(__pyx_t_4);
-  __Pyx_AddTraceback("vector.from_py.__pyx_convert_vector_from_py_double", __pyx_clineno, __pyx_lineno, __pyx_filename);
-  __Pyx_pretend_to_initialize(&__pyx_r);
-  __pyx_L0:;
-  __Pyx_XDECREF(__pyx_v_item);
-  __Pyx_RefNannyFinishContext();
-  return __pyx_r;
-}
-
 static PyMethodDef __pyx_methods[] = {
   {0, 0, 0, 0}
 };
@@ -4485,6 +4422,7 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_n_s_import, __pyx_k_import, sizeof(__pyx_k_import), 0, 0, 1, 1},
   {&__pyx_n_s_inc, __pyx_k_inc, sizeof(__pyx_k_inc), 0, 0, 1, 1},
   {&__pyx_n_s_main, __pyx_k_main, sizeof(__pyx_k_main), 0, 0, 1, 1},
+  {&__pyx_n_s_n, __pyx_k_n, sizeof(__pyx_k_n), 0, 0, 1, 1},
   {&__pyx_n_s_name, __pyx_k_name, sizeof(__pyx_k_name), 0, 0, 1, 1},
   {&__pyx_kp_u_ndarray_is_not_C_contiguous, __pyx_k_ndarray_is_not_C_contiguous, sizeof(__pyx_k_ndarray_is_not_C_contiguous), 0, 1, 0, 0},
   {&__pyx_kp_u_ndarray_is_not_Fortran_contiguou, __pyx_k_ndarray_is_not_Fortran_contiguou, sizeof(__pyx_k_ndarray_is_not_Fortran_contiguou), 0, 1, 0, 0},
@@ -4492,6 +4430,8 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_n_s_numpy, __pyx_k_numpy, sizeof(__pyx_k_numpy), 0, 0, 1, 1},
   {&__pyx_kp_s_numpy_core_multiarray_failed_to, __pyx_k_numpy_core_multiarray_failed_to, sizeof(__pyx_k_numpy_core_multiarray_failed_to), 0, 0, 1, 0},
   {&__pyx_kp_s_numpy_core_umath_failed_to_impor, __pyx_k_numpy_core_umath_failed_to_impor, sizeof(__pyx_k_numpy_core_umath_failed_to_impor), 0, 0, 1, 0},
+  {&__pyx_n_s_ptr_vin, __pyx_k_ptr_vin, sizeof(__pyx_k_ptr_vin), 0, 0, 1, 1},
+  {&__pyx_n_s_ptr_vout, __pyx_k_ptr_vout, sizeof(__pyx_k_ptr_vout), 0, 0, 1, 1},
   {&__pyx_n_s_py_increment, __pyx_k_py_increment, sizeof(__pyx_k_py_increment), 0, 0, 1, 1},
   {&__pyx_kp_s_py_increment_pyx, __pyx_k_py_increment_pyx, sizeof(__pyx_k_py_increment_pyx), 0, 0, 1, 0},
   {&__pyx_n_s_range, __pyx_k_range, sizeof(__pyx_k_range), 0, 0, 1, 1},
@@ -4597,12 +4537,12 @@ static CYTHON_SMALL_CODE int __Pyx_InitCachedConstants(void) {
  * # input is vin and vout, numpy array
  * def inc(np.ndarray[double, ndim=1, mode="c"] v_in,             # <<<<<<<<<<<<<<
  *         np.ndarray[double, ndim=1, mode="c"] v_out):
- *     add_one(v_in, v_out)
+ *     # add_one(v_in, v_out)
  */
-  __pyx_tuple__8 = PyTuple_Pack(2, __pyx_n_s_v_in, __pyx_n_s_v_out); if (unlikely(!__pyx_tuple__8)) __PYX_ERR(0, 25, __pyx_L1_error)
+  __pyx_tuple__8 = PyTuple_Pack(5, __pyx_n_s_v_in, __pyx_n_s_v_out, __pyx_n_s_n, __pyx_n_s_ptr_vin, __pyx_n_s_ptr_vout); if (unlikely(!__pyx_tuple__8)) __PYX_ERR(0, 25, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__8);
   __Pyx_GIVEREF(__pyx_tuple__8);
-  __pyx_codeobj__9 = (PyObject*)__Pyx_PyCode_New(2, 0, 2, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__8, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_py_increment_pyx, __pyx_n_s_inc, 25, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__9)) __PYX_ERR(0, 25, __pyx_L1_error)
+  __pyx_codeobj__9 = (PyObject*)__Pyx_PyCode_New(2, 0, 5, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__8, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_py_increment_pyx, __pyx_n_s_inc, 25, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__9)) __PYX_ERR(0, 25, __pyx_L1_error)
   __Pyx_RefNannyFinishContext();
   return 0;
   __pyx_L1_error:;
@@ -4662,7 +4602,7 @@ static int __Pyx_modinit_type_import_code(void) {
   PyObject *__pyx_t_1 = NULL;
   __Pyx_RefNannySetupContext("__Pyx_modinit_type_import_code", 0);
   /*--- Type import code ---*/
-  __pyx_t_1 = PyImport_ImportModule(__Pyx_BUILTIN_MODULE_NAME); if (unlikely(!__pyx_t_1)) __PYX_ERR(3, 9, __pyx_L1_error)
+  __pyx_t_1 = PyImport_ImportModule(__Pyx_BUILTIN_MODULE_NAME); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 9, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_ptype_7cpython_4type_type = __Pyx_ImportType(__pyx_t_1, __Pyx_BUILTIN_MODULE_NAME, "type", 
   #if defined(PYPY_VERSION_NUM) && PYPY_VERSION_NUM < 0x050B0000
@@ -4671,7 +4611,7 @@ static int __Pyx_modinit_type_import_code(void) {
   sizeof(PyHeapTypeObject),
   #endif
   __Pyx_ImportType_CheckSize_Warn);
-   if (!__pyx_ptype_7cpython_4type_type) __PYX_ERR(3, 9, __pyx_L1_error)
+   if (!__pyx_ptype_7cpython_4type_type) __PYX_ERR(2, 9, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_t_1 = PyImport_ImportModule("numpy"); if (unlikely(!__pyx_t_1)) __PYX_ERR(1, 206, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
@@ -4924,7 +4864,7 @@ if (!__Pyx_RefNanny) {
  * # input is vin and vout, numpy array
  * def inc(np.ndarray[double, ndim=1, mode="c"] v_in,             # <<<<<<<<<<<<<<
  *         np.ndarray[double, ndim=1, mode="c"] v_out):
- *     add_one(v_in, v_out)
+ *     # add_one(v_in, v_out)
  */
   __pyx_t_1 = PyCFunction_NewEx(&__pyx_mdef_12py_increment_1inc, NULL, __pyx_n_s_py_increment); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 25, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
@@ -4941,12 +4881,12 @@ if (!__Pyx_RefNanny) {
   if (PyDict_SetItem(__pyx_d, __pyx_n_s_test, __pyx_t_1) < 0) __PYX_ERR(0, 1, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "vector.from_py":45
+  /* "../../../anaconda3/lib/python3.7/site-packages/Cython/Includes/numpy/__init__.pxd":1046
+ *         raise ImportError("numpy.core.umath failed to import")
  * 
- * @cname("__pyx_convert_vector_from_py_double")
- * cdef vector[X] __pyx_convert_vector_from_py_double(object o) except *:             # <<<<<<<<<<<<<<
- *     cdef vector[X] v
- *     for item in o:
+ * cdef inline int import_ufunc() except -1:             # <<<<<<<<<<<<<<
+ *     try:
+ *         _import_umath()
  */
 
   /*--- Wrapped vars code ---*/
@@ -5712,6 +5652,12 @@ static int __Pyx__GetBufferAndValidate(
 fail:;
   __Pyx_SafeReleaseBuffer(buf);
   return -1;
+}
+
+/* BufferIndexError */
+  static void __Pyx_RaiseBufferIndexError(int axis) {
+  PyErr_Format(PyExc_IndexError,
+     "Out of bounds on buffer access (axis %d)", axis);
 }
 
 /* PyErrFetchRestore */
