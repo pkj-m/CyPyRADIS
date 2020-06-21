@@ -160,9 +160,9 @@ cdef void set_pT(float p, float T):
 
     cdef float c2 = 1.4387773538277204
     iter_params_h_p = p
-    iter_params_h_log_p = log(p)
-    iter_params_h_hlog_T = 0.5 * log(T)
-    iter_params_h_log_rT = log(296.0/T)
+    iter_params_h_log_p = np.log(p)
+    iter_params_h_hlog_T = 0.5 * np.log(T)
+    iter_params_h_log_rT = np.log(296.0/T)
     iter_params_h_c2T = -c2/T
 
     cdef float B = 0.39
@@ -174,18 +174,25 @@ cdef void set_pT(float p, float T):
     cdef int d2 = 2
     cdef int d3 = 1
 
-    cdef float Q2 = T(c2 * B)
-    cdef float Qv1 = 1 / pow(1 - exp(-c2 * w1 / T), d1);
-	cdef float Qv2 = 1 / pow(1 - exp(-c2 * w2 / T), d2);
-	cdef float Qv3 = 1 / pow(1 - exp(-c2 * w3 / T), d3);
+    cdef float Q2 = T/(c2 * B)
+    cdef float Qv1 = 1 / np.power(1 - np.exp(-c2 * w1 / T), d1);
+	cdef float Qv2 = 1 / np.power(1 - np.exp(-c2 * w2 / T), d2);
+	cdef float Qv3 = 1 / np.power(1 - np.exp(-c2 * w3 / T), d3);
 	cdef float Q = Qr * Qv1 * Qv2 * Qv3;
 
     iter_params_h_rQ = 1 / Q
     iter_params_h_rQ = iter_params_h_rQ / T
 
 
+def read_npy(fname, arr):
+    print("Loading {0}...".format(fname))
+    arr = np.load(fname)
+    print("Done!")
 
-cdef void init_lorentzian_params(void):
+cdef void init_lorentzian_params(vector[float] log_2gS, vector[float] na):
+    return
+
+cdef void calc_lorentzian_params(void):
 
     # ----------- setup global variables -----------------
     global host_params_h_top_x
@@ -221,11 +228,120 @@ cdef void init_lorentzian_params(void):
     return 
 
 
+cdef void init_gaussian_params(vector[float] log_2vMm):
+    return
 
-def read_npy(fname, arr):
-    print("Loading {0}...".format(fname))
-    arr = np.load(fname)
-    print("Done!")
+
+cdef void calc_gaussian_params(void):
+
+    # ----------- setup global variables -----------------
+    global host_params_h_log_2vMm_min
+    global host_params_h_log_2vMm_max
+    global init_params_h_N_wG
+    global iter_params_h_hlog_T
+    global iter_params_h_log_wG_min
+    global iter_params_h_log_dwG
+    global epsilon
+    #------------------------------------------------------
+
+    cdef float log_wG_min = host_params_h_log_2vMm_min + iter_params_h_hlog_T
+    cdef float log_wG_max = host_params_h_log_2vMm_max + iter_params_h_hlog_T + epsilon
+    cdef float log_dwG = (log_wG_max - log_wG_min) / (init_params_h_N_wG - 1)
+
+    iter_params_h_log_wG_min = log_wG_min
+    iter_params_h_log_dwG = log_dwG
+
+    return
+
+cdef int prepare_blocks(void):
+
+    # ----------- setup global variables -----------------
+    global host_params_h_v0_dec
+    global host_params_h_da_dec
+    global host_params_h_dec_size
+
+    global iter_params_h_p
+    global iter_params_h_blocks_iv_offset
+    global iter_params_h_blocks_line_offset
+
+    global init_params_h_block_preparation_step_size
+    global init_params_h_N_points_per_block
+    global init_params_h_N_threads_per_block
+    global init_params_h_dv
+    global init_params_h_Max_iterations_per_thread
+    global init_params_h_v_min
+    global init_params_h_dv
+
+    global epsilon
+    #------------------------------------------------------
+
+    cdef float* v0 = host_params_h_v0_dec
+	cdef float* da = host_params_h_da_dec
+
+    cdef float v_prev
+    cdef float dvdi
+    cdef int i = 0
+    cdef int n = 0
+    cdef int step = host_params_h_block_preparation_step_size
+
+    # in lieu of blockData struct, create new arrays
+    cdef int new_block_line_offset
+	cdef int iv_offset
+
+    cdef float v_cur = v0[0] + iter_params_h_p * da[0]
+	cdef float v_max = v_cur + init_params_h_N_points_per_block * init_params_h_dv
+	cdef int i_max = init_params_h_Max_iterations_per_thread
+
+    new_block_line_offset = 0
+	new_block_iv_offset = int(((v_cur - init_params_h_v_min) / init_params_h_dv))
+
+
+    while (true) {
+		i += step;
+		if (i > host_params_h_dec_size) {
+
+			iter_params_h_blocks_line_offset[n] = new_block_line_offset
+            iter_params_h_blocks_iv_offset[n] = new_block_iv_offset
+			n+=1
+
+			new_block_line_offset = i * init_params_h_N_threads_per_block;
+			iter_params_h_blocks_line_offset[n] = new_block_line_offset
+            iter_params_h_blocks_iv_offset[n] = new_block_iv_offset
+
+			break;
+		}
+
+		v_prev = v_cur
+		v_cur = v0[i] + iter_params_h_p * da[i];
+
+		if ((v_cur > v_max) || (i >= i_max)) {
+
+			if (v_cur > v_max) {
+				dvdi = (v_cur - v_prev) / float(step);
+				i -= int(((v_cur - v_max) / dvdi)) + 1;
+				v_cur = v0[i] + iter_params_h_p * da[i];
+			}
+
+			iter_params_h_blocks_line_offset[n] = new_block_line_offset
+            iter_params_h_blocks_iv_offset[n] = new_block_iv_offset
+			n+=1
+
+			new_block_iv_offset = int(((v_cur - init_params_h.v_min) / init_params_h.dv))
+			new_block_line_offset = i * init_params_h_N_threads_per_block
+
+			v_max = v_cur + (init_params_h_N_points_per_block) * init_params_h_dv;
+			i_max = i + init_params_h_Max_iterations_per_thread;
+		}
+	}
+
+	return n
+
+cdef void check_block_spillage(int n_blocks, vector[float] v0, vector[float] da ...):
+    return
+
+
+cdef void iterate(float p, float T, vector[float] spectrum_h):
+    return
 
 def start():
     dir_path = '/home/pankaj/radis-lab/'
