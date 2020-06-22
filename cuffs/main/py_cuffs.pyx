@@ -341,6 +341,110 @@ cdef void check_block_spillage(int n_blocks, vector[float] v0, vector[float] da 
 
 
 cdef void iterate(float p, float T, vector[float] spectrum_h):
+    
+    # ----------- setup global variables -----------------
+    global host_params_h_start
+    global host_params_h_DLM_d
+    global init_params_h_N_v
+    global init_params_h_N_wG_x_N_wL
+    global host_params_h_start_DLM
+    global init_params_h_N_threads_per_block
+    global host_params_h_shared_size
+    global host_params_h_v0_d
+    global host_params_h_da_d
+    global host_params_h_S0_d
+    global host_params_h_El_d
+    global host_params_h_log_2gs_d
+    global host_params_h_na_d
+    global host_params_h_log_2vMm_d
+    global host_params_h_DLM_d
+    global host_params_h_stop_DLM
+    global host_params_h_elapsedTimeDLM
+    global host_params_h_plan_DLM
+    global host_params_h_DLM_d_in
+    global host_params_h_DLM_d_out
+    global host_params_h_spectrum_d_in
+    global host_params_h_plan_spectrum
+    global host_params_h_spectrum_d_out
+    global spectrum_h
+    global host_params_h_spectrum_d
+    global host_params_h_stop
+    global host_params_h_elapsedTime
+    global iter_params_h_log_dwG
+    global iter_params_h_log_dwL
+    global epsilon
+    #------------------------------------------------------
+
+    gpuHandleError(cudaEventRecord(host_params_h_start, 0))
+
+	cdef int n_blocks
+
+	set_pT(p, T)
+	calc_Gaussian_params()
+	calc_Lorentzian_params()
+	n_blocks = prepare_blocks()
+
+	# Copy iter_params to device
+	gpuHandleError(cudaMemcpyToSymbol(iter_params_d, iter_params_h, sizeof(iterData)))
+
+	# Zero DLM:
+	gpuHandleError(cudaMemset(host_params_h_DLM_d, 0, 2 * (init_params_h_N_v + 1) * init_params_h_N_wG_x_N_wL * sizeof(float)))
+
+	print("Getting ready...")
+	# Launch Kernel:
+	gpuHandleError(cudaEventRecord(host_params_h_start_DLM, 0));
+
+	# from population calculation to calculating the line set
+	fillDLM << <n_blocks, init_params_h_N_threads_per_block, host_params_h_shared_size >> > (
+		host_params_h_v0_d,
+		host_params_h_da_d,
+		host_params_h_S0_d,
+		host_params_h_El_d,
+		host_params_h_log_2gs_d,
+		host_params_h_na_d,
+		host_params_h_log_2vMm_d,
+		host_params_h_DLM_d)
+
+	gpuHandleError(cudaEventRecord(host_params_h_stop_DLM, 0));
+	gpuHandleError(cudaEventSynchronize(host_params_h_stop_DLM));
+	gpuHandleError(cudaEventElapsedTime(&host_params_h_elapsedTimeDLM, host_params_h_start_DLM, host_params_h_stop_DLM));
+	print("<<<LAUNCHED>>> ")
+
+
+	gpuHandleError(cudaDeviceSynchronize())
+
+	# FFT
+	cufftExecR2C(host_params_h_plan_DLM, host_params_h_DLM_d_in, host_params_h_DLM_d_out)
+	gpuHandleError(cudaDeviceSynchronize())
+
+	cdef int n_threads = 1024
+	n_blocks = (init_params_h_N_v + 1) / n_threads + 1
+
+	applyLineshapes << < n_blocks, n_threads >> > (host_params_h_DLM_d_out, host_params_h_spectrum_d_in)
+
+	gpuHandleError(cudaDeviceSynchronize())
+
+	# inverse FFT
+	cufftExecC2R(host_params_h_plan_spectrum, host_params_h_spectrum_d_in, host_params_h_spectrum_d_out)
+	gpuHandleError(cudaDeviceSynchronize())
+
+	gpuHandleError(cudaMemcpy(spectrum_h, host_params_h_spectrum_d, init_params_h_N_v * sizeof(float), cudaMemcpyDeviceToHost))
+	# end of voigt broadening
+	# spectrum_h is the k nu
+	
+	gpuHandleError(cudaEventRecord(host_params_h_stop, 0))
+	gpuHandleError(cudaEventSynchronize(host_params_h_stop))
+	gpuHandleError(cudaEventElapsedTime(&host_params_h_elapsedTime, host_params_h_start, host_params_h_stop))
+
+	#cout << "(" << elapsedTime << " ms)" << endl;
+	print(fixed << setprecision(2);
+	print("[rG = " << (exp(iter_params_h.log_dwG) - 1) * 100 << "%, ";
+	print("rL = " << (exp(iter_params_h.log_dwL) - 1) * 100 << "%] ";
+	print("Runtime: " << host_params_h.elapsedTimeDLM;
+	print(" + " << host_params_h.elapsedTime - host_params_h.elapsedTimeDLM;
+	print(" = " << host_params_h.elapsedTime << " ms" << endl;
+
+
     return
 
 def start():
