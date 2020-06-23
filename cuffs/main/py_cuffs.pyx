@@ -190,6 +190,24 @@ def read_npy(fname, arr):
     print("Done!")
 
 cdef void init_lorentzian_params(vector[float] log_2gS, vector[float] na):
+
+    print("Initializing Lorentzian parameters")
+
+    cdef int top_size = 0
+    cdef int bottom_size = 0
+
+    fname = "Lorenzian_minmax_"+string(len(log_2gS)) + ".dat"
+
+    try:
+        with open(fname, 'rb') as f:
+            print(" (from cache)... ")
+            lt = pickle.load(f)
+
+            top_size = lt[0]
+            bottom_size = 
+    except:
+
+
     return
 
 cdef void calc_lorentzian_params(void):
@@ -229,6 +247,36 @@ cdef void calc_lorentzian_params(void):
 
 
 cdef void init_gaussian_params(vector[float] log_2vMm):
+
+    # ----------- setup global variables -----------------
+    global host_params_h_log_2vMm_min
+    global host_params_h_log_2vMm_max
+    #------------------------------------------------------
+
+    cdef float log_2vMm_min
+    cdef float log_2vMm_max
+    print("Initializing Gaussian parameters")
+
+    fname = "Gaussian_minmax_" + string(len(log_2vMm)) + ".dat"
+    try:
+        with open(fname, 'rb') as f:
+            print(" (from cache)... ")
+            lt = pickle.load(f)
+            log_2vMm_min = lt[0]
+            log_2vMm_max = lt[1]
+    except:
+        print("... ")
+        log_2vMm_min = np.minimum(log_2vMm)
+        log_2vMm_max = np.maximum(log_2vMm)
+        lt = [log_2vMm_min, log_2vMm_max]
+        with open(fname, 'wb') as f:
+            pickle.dump(lt, f)
+    
+    host_params_h_log_2vMm_min = log_2vMm_min
+    host_params_h_log_2vMm_max = log_2vMm_max
+
+    print("Done!")
+
     return
 
 
@@ -304,7 +352,7 @@ cdef int prepare_blocks(void):
             iter_params_h_blocks_iv_offset[n] = new_block_iv_offset
 			n+=1
 
-			new_block_line_offset = i * init_params_h_N_threads_per_block;
+			new_block_line_offset = i * init_params_h_N_threads_per_block
 			iter_params_h_blocks_line_offset[n] = new_block_line_offset
             iter_params_h_blocks_iv_offset[n] = new_block_iv_offset
 
@@ -319,7 +367,7 @@ cdef int prepare_blocks(void):
 			if (v_cur > v_max) {
 				dvdi = (v_cur - v_prev) / float(step);
 				i -= int(((v_cur - v_max) / dvdi)) + 1;
-				v_cur = v0[i] + iter_params_h_p * da[i];
+				v_cur = v0[i] + iter_params_h_p * da[i]
 			}
 
 			iter_params_h_blocks_line_offset[n] = new_block_line_offset
@@ -329,8 +377,8 @@ cdef int prepare_blocks(void):
 			new_block_iv_offset = int(((v_cur - init_params_h.v_min) / init_params_h.dv))
 			new_block_line_offset = i * init_params_h_N_threads_per_block
 
-			v_max = v_cur + (init_params_h_N_points_per_block) * init_params_h_dv;
-			i_max = i + init_params_h_Max_iterations_per_thread;
+			v_max = v_cur + (init_params_h_N_points_per_block) * init_params_h_dv
+			i_max = i + init_params_h_Max_iterations_per_thread
 		}
 	}
 
@@ -437,12 +485,12 @@ cdef void iterate(float p, float T, vector[float] spectrum_h):
 	gpuHandleError(cudaEventElapsedTime(&host_params_h_elapsedTime, host_params_h_start, host_params_h_stop))
 
 	#cout << "(" << elapsedTime << " ms)" << endl;
-	print(fixed << setprecision(2);
-	print("[rG = " << (exp(iter_params_h.log_dwG) - 1) * 100 << "%, ";
-	print("rL = " << (exp(iter_params_h.log_dwL) - 1) * 100 << "%] ";
-	print("Runtime: " << host_params_h.elapsedTimeDLM;
-	print(" + " << host_params_h.elapsedTime - host_params_h.elapsedTimeDLM;
-	print(" = " << host_params_h.elapsedTime << " ms" << endl;
+	print(fixed);
+	print("[rG = {0}%".format(np.exp(iter_params_h.log_dwG) - 1) * 100, end = " ")
+	print("rL = {0}%]".format(exp(iter_params_h.log_dwL) - 1) * 100 )
+	print("Runtime: {0}".format(host_params_h_elapsedTimeDLM))
+	print(" + {0}".format(host_params_h_elapsedTime - host_params_h.elapsedTimeDLM), end = " ")
+	print(" = {0} ms".format(host_params_h_elapsedTime))
 
 
     return
