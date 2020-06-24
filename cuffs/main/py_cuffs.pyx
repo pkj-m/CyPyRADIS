@@ -5,8 +5,15 @@ import numpy as np
 cimport numpy as np
 import sys
 from libcpp.vector cimport vector
+from libcpp.unordered_set cimport unordered_set
+from libcpp.utility cimport pair
+from lipcpp.map cimport map as mapcpp
+from cython.operator import dereference, postincrement
+
 
 cdef  float epsilon = 0.0001
+cdef float FLOAT_MAX =  1e30
+cdef float FLOAT_MIN = -1e30
 
 #-----------------------------------
 #    hostData: host_params_h       #
@@ -191,6 +198,22 @@ def read_npy(fname, arr):
 
 cdef void init_lorentzian_params(vector[float] log_2gS, vector[float] na):
 
+    # ----------- setup global variables -----------------
+    global host_params_h_top_a
+    global host_params_h_top_b
+    global host_params_h_top_x
+    global host_params_h_bottom_a
+    global host_params_h_bottom_b
+    global host_params_h_bottom_x
+    #------------------------------------------------------
+
+    cdef unordered_set[pair[float,float]] unique_set
+    cdef vector[pair[float,float]] duplicated_removed
+    cdef vector[float] na_short
+    cdef vector[float] log_2gs_short
+    cdef mapcpp[float, float] bottom_envelope_map
+    cdef mapcpp[float, float] top_envelope_map
+
     print("Initializing Lorentzian parameters")
 
     cdef int top_size = 0
@@ -204,10 +227,138 @@ cdef void init_lorentzian_params(vector[float] log_2gS, vector[float] na):
             lt = pickle.load(f)
 
             top_size = lt[0]
-            bottom_size = 
+            host_params_h_top_a.resize(top_size)
+            host_params_h_top_b.resize(top_size)
+            host_params_h_top_x.resize(top_size)
+
+            # now read top_size bits 3 times to fill the above 3 vectors
+            host_params_h_top_a = lt[1]
+            host_params_h_top_b = lt[2]
+            host_params_h_top_x = lt[3]
+
+            bottom_size = lt[4]
+            host_params_h_bottom_a.resize(bottom_size)
+            host_params_h_bottom_b.resize(bottom_size)
+            host_params_h_bottom_x.resize(bottom_size)
+
+            host_params_h_bottom_a = lt[5]
+            host_params_h_bottom_b = lt[6]
+            host_params_h_bottom_x = lt[7]
+
     except:
+        print(" ... ")
 
+        for i in range(len(na)):
+            unique_set.insert({na[i], log_2gs[i]})
+        
+        duplicates_removed.assign(unique_set.begin(), unique_set.end())
 
+        for i, j in duplicates_removed:
+            na_short.push_back(i)
+            log_2gs_short.push_back(j)
+
+        for i in range(len(na_short)):
+            cdef float na_i = na_short[i]
+            cdef float log_2gs_i = log_2gs_short[i]
+
+            if bottom_envelope_map.count(na_i):
+                if log_2gs_i < bottom_envelope_map.at(na_i):
+                    bottom_envelope_map.at(na_i) = log_2gs_i
+            else:
+                bottom_envelope_map.insert({na_i, log_2gs_i})
+
+            if top_envelope_map.count(na_i):
+                if log_2gs_i > top_envelope_map.at(na_i):
+                    top_envelope_map.at(na_i) = log_2gs_i
+            else:
+                top_envelope_map.insert({na_i, log_2gs_i})
+        
+        cdef vector[float] top_a = { (*top_envelope_map.begin()).first }
+		cdef vector[float] top_b = { (*top_envelope_map.begin()).second }
+		cdef vector[float] top_x = { FLOAT_MIN }
+
+        idx = 0
+        for first_el, second_el in top_envelope_map:
+            cdef float x_ij
+
+            if idx != 0:
+                for i in range(len(top_x)):
+                    x_ij = (second_el - top_b[i]) / (top_a[i] - first_el)
+                    if x_ij >= top_x[i]:
+                        if i < top_x.size() - 1:
+                            if x_ij < top_x[i+1]:
+                                break;
+                        else:
+                            break
+                
+                top_a.resize(i+1)
+                top_b.resize(i+1)
+                top_x.resize(i+1)
+
+                top_a.push_back(first_el)
+                top_b.push_back(second_el)
+                top_x.push_back(x_ij)
+
+            idx+=1
+
+        top_x.erase(top_x.begin())
+        top_x.push_back(FLOAT_MAX)
+
+        host_params_h_top_a = top_a
+        host_params_h_top_b = top_b
+        host_params_h_top_x = top_x
+        top_size = top_x.size()
+
+        cdef vector[float] bottom_a = { (*bottom_envelope_map.begin()).first }
+		cdef vector[float] bottom_b = { (*bottom_envelope_map.begin()).second }
+		cdef vector[float] bottom_x = { FLOAT_MIN }
+
+        idx = 0
+
+        for first_el, second_el in bottom_envelope_map:
+            cdef float x_ij
+
+            if idx != 0:
+                for i in range(len(bottom_x)):
+                    x_ij = (second_el - bottom_b[i]) / (bottom_a[i] - first_el)
+                    if x_ij >= bottom_x[i]:
+                        if i < bottom_x.size() - 1:
+                            if x_ij < bottom_x[i+1]:
+                                break
+                        else:
+                            break
+                
+                bottom_a.resize(i + 1)
+				bottom_b.resize(i + 1)
+				bottom_x.resize(i + 1)
+
+				bottom_a.push_back(first_el)
+				bottom_b.push_back(second_el)
+				bottom_x.push_back(x_ij)
+
+            idx+=1
+        
+        bottom_x.erase(bottom_x.begin())
+		bottom_x.push_back(FLOAT_MAX)
+
+		host_params_h_bottom_a = bottom_a
+		host_params_h_bottom_b = bottom_b
+		host_params_h_bottom_x = bottom_x
+		bottom_size = bottom_x.size()
+
+        lt = [top_size,
+            host_params_h_top_a,
+            host_params_h_top_b,
+            host_params_h_top_x,
+            bottom_size,
+            host_params_h_bottom_a,
+            host_params_h_bottom_b,
+            host_params_h_bottom_x]
+        
+        with open(fname, 'wb') as f:
+            pickle.dump(lt, f)
+    
+    print("Done!")
     return
 
 cdef void calc_lorentzian_params(void):
