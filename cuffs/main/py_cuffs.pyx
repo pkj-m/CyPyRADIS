@@ -1,13 +1,15 @@
 # distutils: language=c++
 
+from __future__ import print_function
+import pickle
 from cpython cimport array
 import numpy as np
 cimport numpy as np
 import sys
 from libcpp.vector cimport vector
-from libcpp.unordered_set cimport unordered_set
+from libcpp.set cimport set
 from libcpp.utility cimport pair
-from lipcpp.map cimport map as mapcpp
+from libcpp.map cimport map as mapcpp
 from cython.operator import dereference, postincrement
 
 
@@ -34,8 +36,8 @@ cdef  vector[float] host_params_h_bottom_a
 cdef  vector[float] host_params_h_bottom_b
 
 cdef  int host_params_h_dec_size
-cdef  float* host_params_h_v0_size
-cdef  float* host_params_h_da_size
+cdef  float* host_params_h_v0_dec
+cdef  float* host_params_h_da_dec
 
 cdef  int host_params_h_shared_size
 #cdef  cudaEvent_t host_params_h_start
@@ -181,11 +183,11 @@ cdef void set_pT(float p, float T):
     cdef int d2 = 2
     cdef int d3 = 1
 
-    cdef float Q2 = T/(c2 * B)
-    cdef float Qv1 = 1 / np.power(1 - np.exp(-c2 * w1 / T), d1);
-	cdef float Qv2 = 1 / np.power(1 - np.exp(-c2 * w2 / T), d2);
-	cdef float Qv3 = 1 / np.power(1 - np.exp(-c2 * w3 / T), d3);
-	cdef float Q = Qr * Qv1 * Qv2 * Qv3;
+    cdef float Qr = T/(c2 * B)
+    cdef float Qv1 = 1 / np.power(1 - np.exp(-c2 * w1 / T), d1)
+    cdef float Qv2 = 1 / np.power(1 - np.exp(-c2 * w2 / T), d2)
+    cdef float Qv3 = 1 / np.power(1 - np.exp(-c2 * w3 / T), d3)
+    cdef float Q = Qr * Qv1 * Qv2 * Qv3;
 
     iter_params_h_rQ = 1 / Q
     iter_params_h_rQ = iter_params_h_rQ / T
@@ -196,7 +198,7 @@ def read_npy(fname, arr):
     arr = np.load(fname)
     print("Done!")
 
-cdef void init_lorentzian_params(vector[float] log_2gS, vector[float] na):
+cdef void init_lorentzian_params(vector[float] log_2gs, vector[float] na):
 
     # ----------- setup global variables -----------------
     global host_params_h_top_a
@@ -207,19 +209,27 @@ cdef void init_lorentzian_params(vector[float] log_2gS, vector[float] na):
     global host_params_h_bottom_x
     #------------------------------------------------------
 
-    cdef unordered_set[pair[float,float]] unique_set
-    cdef vector[pair[float,float]] duplicated_removed
+    cdef set[pair[float,float]] unique_set
+    cdef vector[pair[float,float]] duplicates_removed
     cdef vector[float] na_short
     cdef vector[float] log_2gs_short
     cdef mapcpp[float, float] bottom_envelope_map
     cdef mapcpp[float, float] top_envelope_map
+
+    cdef vector[float] top_a 
+    cdef vector[float] top_b 
+    cdef vector[float] top_x
+
+    cdef vector[float] bottom_a 
+    cdef vector[float] bottom_b 
+    cdef vector[float] bottom_x
 
     print("Initializing Lorentzian parameters")
 
     cdef int top_size = 0
     cdef int bottom_size = 0
 
-    fname = "Lorenzian_minmax_"+string(len(log_2gS)) + ".dat"
+    fname = "Lorenzian_minmax_" + str(len(log_2gs)) + ".dat"
 
     try:
         with open(fname, 'rb') as f:
@@ -258,29 +268,27 @@ cdef void init_lorentzian_params(vector[float] log_2gS, vector[float] na):
             log_2gs_short.push_back(j)
 
         for i in range(len(na_short)):
-            cdef float na_i = na_short[i]
-            cdef float log_2gs_i = log_2gs_short[i]
+            na_i = na_short[i]
+            log_2gs_i = log_2gs_short[i]
 
             if bottom_envelope_map.count(na_i):
                 if log_2gs_i < bottom_envelope_map.at(na_i):
-                    bottom_envelope_map.at(na_i) = log_2gs_i
+                    bottom_envelope_map[na_i] = log_2gs_i
             else:
                 bottom_envelope_map.insert({na_i, log_2gs_i})
 
             if top_envelope_map.count(na_i):
                 if log_2gs_i > top_envelope_map.at(na_i):
-                    top_envelope_map.at(na_i) = log_2gs_i
+                    top_envelope_map[na_i] = log_2gs_i
             else:
                 top_envelope_map.insert({na_i, log_2gs_i})
         
-        cdef vector[float] top_a = { (*top_envelope_map.begin()).first }
-		cdef vector[float] top_b = { (*top_envelope_map.begin()).second }
-		cdef vector[float] top_x = { FLOAT_MIN }
+        top_a = { dereference(top_envelope_map.begin()).first }
+        top_b = { dereference(top_envelope_map.begin()).second }
+        top_x = { FLOAT_MIN }
 
         idx = 0
         for first_el, second_el in top_envelope_map:
-            cdef float x_ij
-
             if idx != 0:
                 for i in range(len(top_x)):
                     x_ij = (second_el - top_b[i]) / (top_a[i] - first_el)
@@ -309,15 +317,13 @@ cdef void init_lorentzian_params(vector[float] log_2gS, vector[float] na):
         host_params_h_top_x = top_x
         top_size = top_x.size()
 
-        cdef vector[float] bottom_a = { (*bottom_envelope_map.begin()).first }
-		cdef vector[float] bottom_b = { (*bottom_envelope_map.begin()).second }
-		cdef vector[float] bottom_x = { FLOAT_MIN }
+        bottom_a = { dereference(bottom_envelope_map.begin()).first }
+        bottom_b = { dereference(bottom_envelope_map.begin()).second }
+        bottom_x = { FLOAT_MIN }
 
         idx = 0
 
         for first_el, second_el in bottom_envelope_map:
-            cdef float x_ij
-
             if idx != 0:
                 for i in range(len(bottom_x)):
                     x_ij = (second_el - bottom_b[i]) / (bottom_a[i] - first_el)
@@ -329,22 +335,22 @@ cdef void init_lorentzian_params(vector[float] log_2gS, vector[float] na):
                             break
                 
                 bottom_a.resize(i + 1)
-				bottom_b.resize(i + 1)
-				bottom_x.resize(i + 1)
-
-				bottom_a.push_back(first_el)
-				bottom_b.push_back(second_el)
-				bottom_x.push_back(x_ij)
+                bottom_b.resize(i + 1)
+                bottom_x.resize(i + 1)
+                
+                bottom_a.push_back(first_el)
+                bottom_b.push_back(second_el)
+                bottom_x.push_back(x_ij)
 
             idx+=1
         
         bottom_x.erase(bottom_x.begin())
-		bottom_x.push_back(FLOAT_MAX)
+        bottom_x.push_back(FLOAT_MAX)
 
-		host_params_h_bottom_a = bottom_a
-		host_params_h_bottom_b = bottom_b
-		host_params_h_bottom_x = bottom_x
-		bottom_size = bottom_x.size()
+        host_params_h_bottom_a = bottom_a
+        host_params_h_bottom_b = bottom_b
+        host_params_h_bottom_x = bottom_x
+        bottom_size = bottom_x.size()
 
         lt = [top_size,
             host_params_h_top_a,
@@ -361,7 +367,7 @@ cdef void init_lorentzian_params(vector[float] log_2gS, vector[float] na):
     print("Done!")
     return
 
-cdef void calc_lorentzian_params(void):
+cdef void calc_lorentzian_params():
 
     # ----------- setup global variables -----------------
     global host_params_h_top_x
@@ -408,7 +414,7 @@ cdef void init_gaussian_params(vector[float] log_2vMm):
     cdef float log_2vMm_max
     print("Initializing Gaussian parameters")
 
-    fname = "Gaussian_minmax_" + string(len(log_2vMm)) + ".dat"
+    fname = "Gaussian_minmax_" + str(len(log_2vMm)) + ".dat"
     try:
         with open(fname, 'rb') as f:
             print(" (from cache)... ")
@@ -431,7 +437,7 @@ cdef void init_gaussian_params(vector[float] log_2vMm):
     return
 
 
-cdef void calc_gaussian_params(void):
+cdef void calc_gaussian_params():
 
     # ----------- setup global variables -----------------
     global host_params_h_log_2vMm_min
@@ -452,7 +458,7 @@ cdef void calc_gaussian_params(void):
 
     return
 
-cdef int prepare_blocks(void):
+cdef int prepare_blocks():
 
     # ----------- setup global variables -----------------
     global host_params_h_v0_dec
@@ -475,7 +481,7 @@ cdef int prepare_blocks(void):
     #------------------------------------------------------
 
     cdef float* v0 = host_params_h_v0_dec
-	cdef float* da = host_params_h_da_dec
+    cdef float* da = host_params_h_da_dec
 
     cdef float v_prev
     cdef float dvdi
@@ -485,58 +491,48 @@ cdef int prepare_blocks(void):
 
     # in lieu of blockData struct, create new arrays
     cdef int new_block_line_offset
-	cdef int iv_offset
+    cdef int iv_offset
 
     cdef float v_cur = v0[0] + iter_params_h_p * da[0]
-	cdef float v_max = v_cur + init_params_h_N_points_per_block * init_params_h_dv
-	cdef int i_max = init_params_h_Max_iterations_per_thread
-
+    cdef float v_max = v_cur + init_params_h_N_points_per_block * init_params_h_dv
+    cdef int i_max = init_params_h_Max_iterations_per_thread
+    
     new_block_line_offset = 0
-	new_block_iv_offset = int(((v_cur - init_params_h_v_min) / init_params_h_dv))
+    new_block_iv_offset = int(((v_cur - init_params_h_v_min) / init_params_h_dv))
 
 
-    while (true) {
-		i += step;
-		if (i > host_params_h_dec_size) {
-
-			iter_params_h_blocks_line_offset[n] = new_block_line_offset
+    while 1:
+        i += step
+        if i > host_params_h_dec_size:
+            iter_params_h_blocks_line_offset[n] = new_block_line_offset
             iter_params_h_blocks_iv_offset[n] = new_block_iv_offset
-			n+=1
-
-			new_block_line_offset = i * init_params_h_N_threads_per_block
-			iter_params_h_blocks_line_offset[n] = new_block_line_offset
+            n+=1
+            new_block_line_offset = i * init_params_h_N_threads_per_block
+            iter_params_h_blocks_line_offset[n] = new_block_line_offset
             iter_params_h_blocks_iv_offset[n] = new_block_iv_offset
-
-			break;
-		}
-
-		v_prev = v_cur
-		v_cur = v0[i] + iter_params_h_p * da[i];
-
-		if ((v_cur > v_max) || (i >= i_max)) {
-
-			if (v_cur > v_max) {
-				dvdi = (v_cur - v_prev) / float(step);
-				i -= int(((v_cur - v_max) / dvdi)) + 1;
-				v_cur = v0[i] + iter_params_h_p * da[i]
-			}
-
-			iter_params_h_blocks_line_offset[n] = new_block_line_offset
+            break
+        
+        v_prev = v_cur
+        v_cur = v0[i] + iter_params_h_p * da[i]
+        
+        if ((v_cur > v_max) or (i >= i_max)) : 
+            if (v_cur > v_max) : 
+                dvdi = (v_cur - v_prev) / float(step)
+                i -= int(((v_cur - v_max) / dvdi)) + 1
+                v_cur = v0[i] + iter_params_h_p * da[i]
+            
+            iter_params_h_blocks_line_offset[n] = new_block_line_offset
             iter_params_h_blocks_iv_offset[n] = new_block_iv_offset
-			n+=1
+            n+=1
+            new_block_iv_offset = int(((v_cur - init_params_h_v_min) / init_params_h_dv))
+            new_block_line_offset = i * init_params_h_N_threads_per_block
+            v_max = v_cur + (init_params_h_N_points_per_block) * init_params_h_dv
+            i_max = i + init_params_h_Max_iterations_per_thread
+    
+    return n
 
-			new_block_iv_offset = int(((v_cur - init_params_h.v_min) / init_params_h.dv))
-			new_block_line_offset = i * init_params_h_N_threads_per_block
-
-			v_max = v_cur + (init_params_h_N_points_per_block) * init_params_h_dv
-			i_max = i + init_params_h_Max_iterations_per_thread
-		}
-	}
-
-	return n
-
-cdef void check_block_spillage(int n_blocks, vector[float] v0, vector[float] da ...):
-    return
+#cdef void check_block_spillage(int n_blocks, vector[float] v0, vector[float] da ...):
+#    return
 
 
 cdef void iterate(float p, float T, vector[float] spectrum_h):
@@ -574,74 +570,72 @@ cdef void iterate(float p, float T, vector[float] spectrum_h):
     global epsilon
     #------------------------------------------------------
 
-    gpuHandleError(cudaEventRecord(host_params_h_start, 0))
-
-	cdef int n_blocks
-
-	set_pT(p, T)
-	calc_Gaussian_params()
-	calc_Lorentzian_params()
-	n_blocks = prepare_blocks()
+    #gpuHandleError(cudaEventRecord(host_params_h_start, 0))
+    
+    cdef int n_blocks
+    set_pT(p, T)
+    calc_gaussian_params()
+    calc_lorentzian_params()
+    n_blocks = prepare_blocks()
 
 	# Copy iter_params to device
-	gpuHandleError(cudaMemcpyToSymbol(iter_params_d, iter_params_h, sizeof(iterData)))
+	#gpuHandleError(cudaMemcpyToSymbol(iter_params_d, iter_params_h, sizeof(iterData)))
 
 	# Zero DLM:
-	gpuHandleError(cudaMemset(host_params_h_DLM_d, 0, 2 * (init_params_h_N_v + 1) * init_params_h_N_wG_x_N_wL * sizeof(float)))
+	#gpuHandleError(cudaMemset(host_params_h_DLM_d, 0, 2 * (init_params_h_N_v + 1) * init_params_h_N_wG_x_N_wL * sizeof(float)))
 
-	print("Getting ready...")
+    print("Getting ready...")
 	# Launch Kernel:
-	gpuHandleError(cudaEventRecord(host_params_h_start_DLM, 0));
+	#gpuHandleError(cudaEventRecord(host_params_h_start_DLM, 0));
 
 	# from population calculation to calculating the line set
-	fillDLM << <n_blocks, init_params_h_N_threads_per_block, host_params_h_shared_size >> > (
-		host_params_h_v0_d,
-		host_params_h_da_d,
-		host_params_h_S0_d,
-		host_params_h_El_d,
-		host_params_h_log_2gs_d,
-		host_params_h_na_d,
-		host_params_h_log_2vMm_d,
-		host_params_h_DLM_d)
+	# fillDLM << <n_blocks, init_params_h_N_threads_per_block, host_params_h_shared_size >> > (
+	# 	host_params_h_v0_d,
+	# 	host_params_h_da_d,
+	# 	host_params_h_S0_d,
+	# 	host_params_h_El_d,
+	# 	host_params_h_log_2gs_d,
+	# 	host_params_h_na_d,
+	# 	host_params_h_log_2vMm_d,
+	# 	host_params_h_DLM_d)
 
-	gpuHandleError(cudaEventRecord(host_params_h_stop_DLM, 0));
-	gpuHandleError(cudaEventSynchronize(host_params_h_stop_DLM));
-	gpuHandleError(cudaEventElapsedTime(&host_params_h_elapsedTimeDLM, host_params_h_start_DLM, host_params_h_stop_DLM));
-	print("<<<LAUNCHED>>> ")
+	# gpuHandleError(cudaEventRecord(host_params_h_stop_DLM, 0));
+	# gpuHandleError(cudaEventSynchronize(host_params_h_stop_DLM));
+	# gpuHandleError(cudaEventElapsedTime(&host_params_h_elapsedTimeDLM, host_params_h_start_DLM, host_params_h_stop_DLM));
+    print("<<<LAUNCHED>>> ")
 
 
-	gpuHandleError(cudaDeviceSynchronize())
+	#gpuHandleError(cudaDeviceSynchronize())
 
 	# FFT
-	cufftExecR2C(host_params_h_plan_DLM, host_params_h_DLM_d_in, host_params_h_DLM_d_out)
-	gpuHandleError(cudaDeviceSynchronize())
+	#cufftExecR2C(host_params_h_plan_DLM, host_params_h_DLM_d_in, host_params_h_DLM_d_out)
+	#gpuHandleError(cudaDeviceSynchronize())
 
-	cdef int n_threads = 1024
-	n_blocks = (init_params_h_N_v + 1) / n_threads + 1
+    cdef int n_threads = 1024
+    n_blocks = (init_params_h_N_v + 1) / n_threads + 1
 
-	applyLineshapes << < n_blocks, n_threads >> > (host_params_h_DLM_d_out, host_params_h_spectrum_d_in)
+    #applyLineshapes << < n_blocks, n_threads >> > (host_params_h_DLM_d_out, host_params_h_spectrum_d_in)
 
-	gpuHandleError(cudaDeviceSynchronize())
+	#gpuHandleError(cudaDeviceSynchronize())
 
 	# inverse FFT
-	cufftExecC2R(host_params_h_plan_spectrum, host_params_h_spectrum_d_in, host_params_h_spectrum_d_out)
-	gpuHandleError(cudaDeviceSynchronize())
+	#cufftExecC2R(host_params_h_plan_spectrum, host_params_h_spectrum_d_in, host_params_h_spectrum_d_out)
+	#gpuHandleError(cudaDeviceSynchronize())
 
-	gpuHandleError(cudaMemcpy(spectrum_h, host_params_h_spectrum_d, init_params_h_N_v * sizeof(float), cudaMemcpyDeviceToHost))
+	#gpuHandleError(cudaMemcpy(spectrum_h, host_params_h_spectrum_d, init_params_h_N_v * sizeof(float), cudaMemcpyDeviceToHost))
 	# end of voigt broadening
 	# spectrum_h is the k nu
 	
-	gpuHandleError(cudaEventRecord(host_params_h_stop, 0))
-	gpuHandleError(cudaEventSynchronize(host_params_h_stop))
-	gpuHandleError(cudaEventElapsedTime(&host_params_h_elapsedTime, host_params_h_start, host_params_h_stop))
+	#gpuHandleError(cudaEventRecord(host_params_h_stop, 0))
+	#gpuHandleError(cudaEventSynchronize(host_params_h_stop))
+	#gpuHandleError(cudaEventElapsedTime(&host_params_h_elapsedTime, host_params_h_start, host_params_h_stop))
 
 	#cout << "(" << elapsedTime << " ms)" << endl;
-	print(fixed);
-	print("[rG = {0}%".format(np.exp(iter_params_h.log_dwG) - 1) * 100, end = " ")
-	print("rL = {0}%]".format(exp(iter_params_h.log_dwL) - 1) * 100 )
-	print("Runtime: {0}".format(host_params_h_elapsedTimeDLM))
-	print(" + {0}".format(host_params_h_elapsedTime - host_params_h.elapsedTimeDLM), end = " ")
-	print(" = {0} ms".format(host_params_h_elapsedTime))
+    print("[rG = {0}%".format(np.exp(iter_params_h_log_dwG) - 1) * 100, end = " ")
+    print("rL = {0}%]".format(np.exp(iter_params_h_log_dwL) - 1) * 100 )
+    print("Runtime: {0}".format(host_params_h_elapsedTimeDLM))
+    print(" + {0}".format(host_params_h_elapsedTime - host_params_h_elapsedTimeDLM), end = " ")
+    print(" = {0} ms".format(host_params_h_elapsedTime))
 
 
     return
@@ -716,14 +710,14 @@ def start():
     spec_h_log_2gs = log_2gs
     read_npy(dir_path + 'na.npy', na)
     spec_h_na = na
-    #init_lorentzian_params(log_2gs, na)
+    init_lorentzian_params(log_2gs, na)
     print()
 
     # wG inits:
     print("Init wG: ")
     read_npy(dir_path + 'log_2vMm.npy', log_2vMm)
     spec_h_log_2vMm = log_2vMm
-    #init_gaussian_params(log_2vMm)
+    init_gaussian_params(log_2vMm)
     print()
 
     # I inits:
