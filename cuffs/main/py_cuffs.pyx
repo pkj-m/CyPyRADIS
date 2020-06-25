@@ -4,6 +4,7 @@ from __future__ import print_function
 import pickle
 from cpython cimport array
 import numpy as np
+import cupy as cp
 cimport numpy as np
 import sys
 from libcpp.vector cimport vector
@@ -138,19 +139,199 @@ cdef  vector[float] spec_h_log_2gs
 #--------------------------------------------
 
 
+#--------------------------------------------
+#               gpu data                    #
+#--------------------------------------------
+
+#-----------------------------------
+#    initData: init_params_d       #
+# ----------------------------------
+
+# DLM spectral parameters
+cdef  float init_params_d_v_min
+cdef  float init_params_d_v_max
+cdef  float init_params_d_dv
+
+# DLM sizes:
+cdef  int init_params_d_N_v
+cdef  int init_params_d_N_wG
+cdef  int init_params_d_N_wL
+cdef  int init_params_d_N_wG_x_N_wL
+cdef  int init_params_d_N_total
+
+# work parameters:
+cdef  int init_params_d_Max_lines
+cdef  int init_params_d_N_lines
+cdef  int init_params_d_N_points_per_block
+cdef  int init_params_d_N_threads_per_block
+cdef  int init_params_d_N_blocks_per_grid
+cdef  int init_params_d_N_points_per_thread
+cdef  int init_params_d_Max_iterations_per_thread
+
+cdef  int init_params_d_shared_size_floats
+
+# ---------------------------------
+
+#-----------------------------------------
+#       iterData: iter_params_d          #
+#-----------------------------------------
+
+# pressure and temperature
+cdef  float iter_params_d_p
+cdef  float iter_params_d_log_p
+cdef  float iter_params_d_dlog_T
+cdef  float iter_params_d_log_rT
+cdef  float iter_params_d_c2T
+cdef  float iter_params_d_rQ
+
+# spectral parameters
+cdef  float iter_params_d_log_wG_min
+cdef  float iter_params_d_log_wL_min
+cdef  float iter_params_d_log_dwG
+cdef  float iter_params_d_log_dwL
+
+cdef  int iter_params_d_blocks_line_offset[4096]
+cdef  int iter_params_d_blocks_iv_offset[4096]
+
+#------------------------------------------
+
+#------------------------------------------
+
 
 ####################################
 ######## KERNELS COME HERE #########
 ####################################
 
 
+# fillDLM
+
+fillDLM_c_code = r'''
+extern "C"{
+__global__ void fillDLM(
+	float* v0,
+	float* da,
+	float* S0,
+	float* El,
+	float* log_2gs,
+	float* na,
+	float* log_2vMm,
+	float* global_DLM) {
+
+	blockData block = iter_params_d.blocks[blockIdx.x + gridDim.x * blockIdx.y];
+	int block_id = blockIdx.x + gridDim.x * blockIdx.y;
+	int N_iterations = (iter_params_d.blocks[block_id + 1].line_offset - iter_params_d.blocks[block_id].line_offset) / init_params_d.N_threads_per_block;
+	int DLM_offset = iter_params_d.blocks[block_id].iv_offset * init_params_d.N_wG_x_N_wL;
+	int iv_offset = iter_params_d.blocks[block_id].iv_offset;
+
+	int NwG = init_params_d.N_wG;
+	int NwGxNwL = init_params_d.N_wG_x_N_wL;
+
+	////Allocate and zero the Shared memory
+	extern __shared__ float shared_DLM[];
+
+	float* DLM = global_DLM;
+
+	for (int n = 0; n < N_iterations; n++) { 
+
+		// >>: Process from left to right edge:
+		int i = iter_params_d.blocks[block_id].line_offset + threadIdx.x + n * blockDim.x;
+		
+		if (i < init_params_d.N_lines) {
+			//Calc v
+			float v_dat = v0[i] + iter_params_d.p * da[i];  // <----- PRESSURE SHIFT
+			float iv = (v_dat - init_params_d.v_min) / init_params_d.dv; //- iv_offset;
+			int iv0 = (int)iv;
+			int iv1 = iv0 + 1  ;
+
+			if ((iv0 >= 0) && (iv1 < init_params_d.N_v)) {
+
+				//Calc wG
+				float log_wG_dat = log_2vMm[i] + iter_params_d.hlog_T; // <---- POPULATION
+				float iwG = (log_wG_dat - iter_params_d.log_wG_min) / iter_params_d.log_dwG;
+				int iwG0 = (int)iwG;
+				int iwG1 = iwG0 + 1;
+				//^8
+
+				//Calc wL
+				float log_wL_dat = log_2gs[i] + iter_params_d.log_p + na[i] * iter_params_d.log_rT;
+				float iwL = (log_wL_dat - iter_params_d.log_wL_min) / iter_params_d.log_dwL;
+				int iwL0 = (int)iwL;	
+				int iwL1 = iwL0 + 1;
+				//^12
+
+				//Calc I  	Line intensity
+				float I_add = iter_params_d.rQ * S0[i] * (expf(iter_params_d.c2T * El[i]) - expf(iter_params_d.c2T * (El[i] + v0[i])));
+				
+				//  reducing the weak line code would come here
+
+				float av = iv - iv0;
+				float awG = (iwG - iwG0) * expf((iwG1 - iwG) * iter_params_d.log_dwG);
+				float awL = (iwL - iwL0) * expf((iwL1 - iwL) * iter_params_d.log_dwL);
+
+				float aV00 = (1 - awG) * (1 - awL);
+				float aV01 = (1 - awG) * awL;
+				float aV10 = awG * (1 - awL);
+				float aV11 = awG * awL;
+
+				float Iv0 = I_add * (1 - av);
+				float Iv1 = I_add * av;
+
+				atomicAdd(&DLM[iwG0 + iwL0 * NwG + iv0 * NwGxNwL], aV00 * Iv0);
+				atomicAdd(&DLM[iwG0 + iwL0 * NwG + iv1 * NwGxNwL], aV00 * Iv1);
+				atomicAdd(&DLM[iwG0 + iwL1 * NwG + iv0 * NwGxNwL], aV01 * Iv0);
+				atomicAdd(&DLM[iwG0 + iwL1 * NwG + iv1 * NwGxNwL], aV01 * Iv1); 
+				atomicAdd(&DLM[iwG1 + iwL0 * NwG + iv0 * NwGxNwL], aV10 * Iv0);
+				atomicAdd(&DLM[iwG1 + iwL0 * NwG + iv1 * NwGxNwL], aV10 * Iv1);
+				atomicAdd(&DLM[iwG1 + iwL1 * NwG + iv0 * NwGxNwL], aV11 * Iv0);
+				atomicAdd(&DLM[iwG1 + iwL1 * NwG + iv1 * NwGxNwL], aV11 * Iv1);
+			}
+		}
+	} 
+}
+
+}'''
+
+fillDLM_module = cp.RawModule(code=fillDLM_c_code)
+fillDLM = fillDLM_module.get_function('fillDLM')
 
 
+# applyLineshapes
 
+applyLineshapes_c_code = r'''
+extern "C"{
+__global__ void applyLineshapes(cufftComplex* DLM, cufftComplex* spectrum) {
+	//TARGET: CuPy custom Kernel
+	const float pi = 3.141592653589793f;
+	const float r4log2 = 0.36067376022224085f; // = 1 / (4 * ln(2))
+	int iv = threadIdx.x + blockDim.x * blockIdx.x;
 
+	if (iv < init_params_d.N_v + 1) {
 
+		float x = iv / (2 * init_params_d.N_v * init_params_d.dv);
+		float mul = 0.0;
+		float out_re = 0.0;
+		float out_im = 0.0;
+		float wG, wL;
+		int index;
 
+		for (int iwG = 0; iwG < init_params_d.N_wG; iwG++) {
+			wG = expf(iter_params_d.log_wG_min + iwG * iter_params_d.log_dwG);
+			for (int iwL = 0; iwL < init_params_d.N_wL; iwL++) {
+				index = iwG + iwL * init_params_d.N_wG + iv * init_params_d.N_wG_x_N_wL;
+				wL = expf(iter_params_d.log_wL_min + iwL * iter_params_d.log_dwL);
+				mul = expf(-r4log2 * powf(pi * x * wG, 2) - pi * x * wL);
+				out_re += mul * DLM[index].x;
+				out_im += mul * DLM[index].y;
+			}
+		}
+		spectrum[iv].x = out_re;
+		spectrum[iv].y = out_im;
+	}
+}
+}'''
 
+apply_lineshapes_module = cp.RawModule(code=applyLineshapes_c_code)
+apply_lineshapes = apply_lineshapes_module.get_function('applyLineshapes')
 
 
 ####################################
