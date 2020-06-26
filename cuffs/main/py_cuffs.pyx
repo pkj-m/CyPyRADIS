@@ -14,7 +14,7 @@ from libcpp.map cimport map as mapcpp
 from cython.operator import dereference, postincrement
 
 
-cdef  float epsilon = 0.0001
+cdef float epsilon = 0.0001
 cdef float FLOAT_MAX =  1e30
 cdef float FLOAT_MIN = -1e30
 
@@ -215,16 +215,22 @@ __global__ void fillDLM(
 	float* log_2gs,
 	float* na,
 	float* log_2vMm,
-	float* global_DLM) {
+	float* global_DLM
+    // include iter_params_d
+    // include init_params_d
+    ) {
 
-	blockData block = iter_params_d.blocks[blockIdx.x + gridDim.x * blockIdx.y];
+	//blockData block = iter_params_d.blocks[blockIdx.x + gridDim.x * blockIdx.y];
+    int block_line_offset = iter_params_d_blocks_line_offset[blockIdx.x + gridDim.x * blockIdx.y];
+    int block_iv_offset = iter_params_d_blocks_iv_offset[blockIdx.x + gridDim.x * blockIdx.y];
+
 	int block_id = blockIdx.x + gridDim.x * blockIdx.y;
-	int N_iterations = (iter_params_d.blocks[block_id + 1].line_offset - iter_params_d.blocks[block_id].line_offset) / init_params_d.N_threads_per_block;
-	int DLM_offset = iter_params_d.blocks[block_id].iv_offset * init_params_d.N_wG_x_N_wL;
-	int iv_offset = iter_params_d.blocks[block_id].iv_offset;
+	int N_iterations = (iter_params_d_blocks_line_offset[block_id + 1] - iter_params_d_blocks_line_offset[block_id]) / init_params_d_N_threads_per_block;
+	int DLM_offset = iter_params_d_blocks_iv_offset[block_id] * init_params_d_N_wG_x_N_wL;
+	int iv_offset = iter_params_d_blocks_iv_offset[block_id];
 
-	int NwG = init_params_d.N_wG;
-	int NwGxNwL = init_params_d.N_wG_x_N_wL;
+	int NwG = init_params_d_N_wG;
+	int NwGxNwL = init_params_d_N_wG_x_N_wL;
 
 	////Allocate and zero the Shared memory
 	extern __shared__ float shared_DLM[];
@@ -234,20 +240,20 @@ __global__ void fillDLM(
 	for (int n = 0; n < N_iterations; n++) { 
 
 		// >>: Process from left to right edge:
-		int i = iter_params_d.blocks[block_id].line_offset + threadIdx.x + n * blockDim.x;
+		int i = iter_params_d_blocks_line_offset[block_id] + threadIdx.x + n * blockDim.x;
 		
 		if (i < init_params_d.N_lines) {
 			//Calc v
-			float v_dat = v0[i] + iter_params_d.p * da[i];  // <----- PRESSURE SHIFT
-			float iv = (v_dat - init_params_d.v_min) / init_params_d.dv; //- iv_offset;
+			float v_dat = v0[i] + iter_params_d_p * da[i];  // <----- PRESSURE SHIFT
+			float iv = (v_dat - init_params_d_v_min) / init_params_d_dv; //- iv_offset;
 			int iv0 = (int)iv;
 			int iv1 = iv0 + 1  ;
 
-			if ((iv0 >= 0) && (iv1 < init_params_d.N_v)) {
+			if ((iv0 >= 0) && (iv1 < init_params_d_N_v)) {
 
 				//Calc wG
-				float log_wG_dat = log_2vMm[i] + iter_params_d.hlog_T; // <---- POPULATION
-				float iwG = (log_wG_dat - iter_params_d.log_wG_min) / iter_params_d.log_dwG;
+				float log_wG_dat = log_2vMm[i] + iter_params_d_hlog_T; // <---- POPULATION
+				float iwG = (log_wG_dat - iter_params_d_log_wG_min) / iter_params_d_log_dwG;
 				int iwG0 = (int)iwG;
 				int iwG1 = iwG0 + 1;
 				//^8
@@ -260,13 +266,13 @@ __global__ void fillDLM(
 				//^12
 
 				//Calc I  	Line intensity
-				float I_add = iter_params_d.rQ * S0[i] * (expf(iter_params_d.c2T * El[i]) - expf(iter_params_d.c2T * (El[i] + v0[i])));
+				float I_add = iter_params_d_rQ * S0[i] * (expf(iter_params_d_c2T * El[i]) - expf(iter_params_d_c2T * (El[i] + v0[i])));
 				
 				//  reducing the weak line code would come here
 
 				float av = iv - iv0;
-				float awG = (iwG - iwG0) * expf((iwG1 - iwG) * iter_params_d.log_dwG);
-				float awL = (iwL - iwL0) * expf((iwL1 - iwL) * iter_params_d.log_dwL);
+				float awG = (iwG - iwG0) * expf((iwG1 - iwG) * iter_params_d_log_dwG);
+				float awL = (iwL - iwL0) * expf((iwL1 - iwL) * iter_params_d_log_dwL);
 
 				float aV00 = (1 - awG) * (1 - awL);
 				float aV01 = (1 - awG) * awL;
@@ -299,32 +305,36 @@ fillDLM = fillDLM_module.get_function('fillDLM')
 
 applyLineshapes_c_code = r'''
 extern "C"{
-__global__ void applyLineshapes(cufftComplex* DLM, cufftComplex* spectrum) {
-	//TARGET: CuPy custom Kernel
+__global__ void applyLineshapes(cufftComplex* DLM, 
+                                cufftComplex* spectrum
+                                // include iter_params_d
+                                // include init_params_d
+                                ) {
+
 	const float pi = 3.141592653589793f;
 	const float r4log2 = 0.36067376022224085f; // = 1 / (4 * ln(2))
 	int iv = threadIdx.x + blockDim.x * blockIdx.x;
 
-	if (iv < init_params_d.N_v + 1) {
+	if (iv < init_params_d_N_v + 1) {
 
-		float x = iv / (2 * init_params_d.N_v * init_params_d.dv);
+		float x = iv / (2 * init_params_d_N_v * init_params_d_dv);
 		float mul = 0.0;
 		float out_re = 0.0;
 		float out_im = 0.0;
 		float wG, wL;
 		int index;
 
-		for (int iwG = 0; iwG < init_params_d.N_wG; iwG++) {
-			wG = expf(iter_params_d.log_wG_min + iwG * iter_params_d.log_dwG);
-			for (int iwL = 0; iwL < init_params_d.N_wL; iwL++) {
-				index = iwG + iwL * init_params_d.N_wG + iv * init_params_d.N_wG_x_N_wL;
-				wL = expf(iter_params_d.log_wL_min + iwL * iter_params_d.log_dwL);
+		for (int iwG = 0; iwG < init_params_d_N_wG; iwG++) {
+			wG = expf(iter_params_d_log_wG_min + iwG * iter_params_d_log_dwG);
+			for (int iwL = 0; iwL < init_params_d_N_wL; iwL++) {
+				index = iwG + iwL * init_params_d_N_wG + iv * init_params_d_N_wG_x_N_wL;
+				wL = expf(iter_params_d_log_wL_min + iwL * iter_params_d_log_dwL);
 				mul = expf(-r4log2 * powf(pi * x * wG, 2) - pi * x * wL);
-				out_re += mul * DLM[index].x;
+				out_re += mul * DLM[index].x;   // check this
 				out_im += mul * DLM[index].y;
 			}
 		}
-		spectrum[iv].x = out_re;
+		spectrum[iv].x = out_re;    // check this as well
 		spectrum[iv].y = out_im;
 	}
 }
@@ -916,12 +926,68 @@ def start():
     print("Allocating device memory...")
 
     # start the CUDA work
-    # 
-    # LINE 1103
-    # .
-    # .
-    # .
-    # LINE 1164    
+    
+	#gpuHandleError(cudaSetDevice(0));
+    #gpuHandleError(cudaFuncSetAttribute(fillDLM, cudaFuncAttributeMaxDynamicSharedMemorySize, host_params_h.shared_size));
+
+	#gpuHandleError(cudaEventCreate(&host_params_h.start));
+	#gpuHandleError(cudaEventCreate(&host_params_h.start_DLM));
+	#gpuHandleError(cudaEventCreate(&host_params_h.stop));
+	#gpuHandleError(cudaEventCreate(&host_params_h.stop_DLM));
+
+
+	#Device memory allocations:
+	#TARGET: These will all be made redundant by CuPy memory transfers
+	gpuHandleError(cudaMalloc((void**)&host_params_h.v0_d, init_params_h.N_lines * sizeof(float)));
+	gpuHandleError(cudaMalloc((void**)&host_params_h.da_d, init_params_h.N_lines * sizeof(float)));
+	gpuHandleError(cudaMalloc((void**)&host_params_h.S0_d, init_params_h.N_lines * sizeof(float)));
+	gpuHandleError(cudaMalloc((void**)&host_params_h.El_d, init_params_h.N_lines * sizeof(float)));
+	gpuHandleError(cudaMalloc((void**)&host_params_h.log_2gs_d, init_params_h.N_lines * sizeof(float)));
+	gpuHandleError(cudaMalloc((void**)&host_params_h.na_d, init_params_h.N_lines * sizeof(float)));
+	gpuHandleError(cudaMalloc((void**)&host_params_h.log_2vMm_d, init_params_h.N_lines * sizeof(float)));
+
+	#gpuHandleError(cudaMalloc((void**)&init_params_d, sizeof(initData)));
+	#gpuHandleError(cudaMalloc((void**)&iter_params_d, sizeof(iterData)));
+
+	# DLM is allocated once, but must be zero'd every iteration.
+	#gpuHandleError(cudaMalloc((void**)&host_params_h.DLM_d, 2 * (init_params_h.N_v + 1) * init_params_h.N_wG_x_N_wL * sizeof(float)));
+	#host_params_h.DLM_d_in = (cufftReal*)host_params_h.DLM_d;
+	#host_params_h.DLM_d_out = (cufftComplex*)host_params_h.DLM_d;
+
+	#gpuHandleError(cudaMalloc((void**)&host_params_h.spectrum_d, 2 * (init_params_h.N_v + 1) * sizeof(float)));
+	#host_params_h.spectrum_d_in = (cufftComplex*)host_params_h.spectrum_d;
+	#host_params_h.spectrum_d_out = (cufftReal*)host_params_h.spectrum_d;
+	print("Done!")
+
+
+	# Copy params to device
+	print("Copying data to device... ")
+	# gpuHandleError(cudaMemcpyToSymbol(init_params_d, &init_params_h, sizeof(initData)));
+
+	#Copy spectral data to device
+	#gpuHandleError(cudaMemcpy(host_params_h.v0_d, spec_h.v0, init_params_h.N_lines * sizeof(float), cudaMemcpyHostToDevice));
+	#gpuHandleError(cudaMemcpy(host_params_h.da_d, spec_h.da, init_params_h.N_lines * sizeof(float), cudaMemcpyHostToDevice));
+	#gpuHandleError(cudaMemcpy(host_params_h.S0_d, spec_h.S0, init_params_h.N_lines * sizeof(float), cudaMemcpyHostToDevice));
+	#gpuHandleError(cudaMemcpy(host_params_h.El_d, spec_h.El, init_params_h.N_lines * sizeof(float), cudaMemcpyHostToDevice));
+	#gpuHandleError(cudaMemcpy(host_params_h.log_2gs_d, spec_h.log_2gs, init_params_h.N_lines * sizeof(float), cudaMemcpyHostToDevice));
+	#gpuHandleError(cudaMemcpy(host_params_h.na_d, spec_h.na, init_params_h.N_lines * sizeof(float), cudaMemcpyHostToDevice));
+	#gpuHandleError(cudaMemcpy(host_params_h.log_2vMm_d, spec_h.log_2vMm, init_params_h.N_lines * sizeof(float), cudaMemcpyHostToDevice));
+	print("Done!")
+
+	print("Planning FFT's... ")
+	# Plan DLM FFT
+	cdef int n_fft[] = { 2 * init_params_h_N_v };
+	# This can be replaced by CuPy.fft
+	cufftCreate(&host_params_h_plan_DLM);
+	cufftPlanMany(&host_params_h_plan_DLM, 1, n_fft,
+		n_fft, init_params_h_N_wG_x_N_wL, 1,
+		n_fft, init_params_h_N_wG_x_N_wL, 1, CUFFT_R2C, init_params_h_N_wG_x_N_wL);
+
+	cufftCreate(&host_params_h_plan_spectrum);
+	cufftPlan1d(&host_params_h_plan_spectrum, n_fft[0], CUFFT_C2R, 1);
+	print("Done!")
+	print("Press any key to start iterations...")
+	_ = input()
 
 
     # START ITERATIONS
@@ -934,9 +1000,21 @@ def start():
     dT = 500.0
 
     for T in range(T_min, T_max, dT):
-        #iterate(p, T, spectrum_h)
-        1
+        iterate(p, T, spectrum_h)
     return
+
+    #Cleanup and go home:
+	#cudaEventDestroy(host_params_h_start);
+	#cudaEventDestroy(host_params_h_start_DLM);
+	#cudaEventDestroy(host_params_h_stop);
+	#cudaEventDestroy(host_params_h_stop_DLM);
+
+	#host_params_h_DLM_d_in = NULL;
+	#host_params_h_DLM_d_out = NULL;
+	#cufftDestroy(host_params_h_plan_DLM);
+	#cufftDestroy(host_params_h_plan_spectrum);
+	#free(DLM_h);
+	#gpuHandleError(cudaDeviceReset());
 
 
 
