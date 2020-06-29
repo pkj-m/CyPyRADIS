@@ -813,6 +813,7 @@ cdef void iterate(float p, float T, vector[float] spectrum_h):
 
 	# FFT
 	#cufftExecR2C(host_params_h_plan_DLM, host_params_h_DLM_d_in, host_params_h_DLM_d_out)
+    host_params_h_DLM_d_out = cp.fft.rfftn(host_params_h_DLM_d_in)
 	cp.cuda.runtime.deviceSynchronize()
 
     cdef int n_threads = 1024
@@ -823,6 +824,7 @@ cdef void iterate(float p, float T, vector[float] spectrum_h):
 
 	# inverse FFT
 	#cufftExecC2R(host_params_h_plan_spectrum, host_params_h_spectrum_d_in, host_params_h_spectrum_d_out)
+    host_params_h_spectrum_d_out = cp.fft.irfftn(host_params_h_spectrum_d_in)
     cp.cuda.runtime.deviceSynchronize()
 
 	#gpuHandleError(cudaMemcpy(spectrum_h, host_params_h_spectrum_d, init_params_h_N_v * sizeof(float), cudaMemcpyDeviceToHost))
