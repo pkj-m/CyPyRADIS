@@ -55,6 +55,7 @@ host_params_h_stop_DLM = cp.cuda.Event(host_params_h_stop_DLM_ptr)
 cdef  float host_params_h_elapsedTime
 cdef  float host_params_h_elapsedTimeDLM
 
+# not needed in case of CuPy
 #cdef  cufftHandle host_params_h_plan_DLM
 #cdef  cufftHandle host_params_h_plan_spectrum
 
@@ -69,6 +70,7 @@ cdef  float* host_params_h_log_2vMm_d
 cdef  float* host_params_h_DLM_d
 cdef  float* host_params_h_spectrum_d
 
+# defined in 'iterate'
 #cdef  cufftReal* host_params_h_DLM_d_in
 #cdef  cufftComplex* host_params_h_DLM_d_out
 
@@ -154,28 +156,22 @@ cdef  vector[float] spec_h_log_2gs
 #    initData: init_params_d       #
 # ----------------------------------
 
-# DLM spectral parameters
-cdef  float init_params_d_v_min
-cdef  float init_params_d_v_max
-cdef  float init_params_d_dv
-
-# DLM sizes:
-cdef  int init_params_d_N_v
-cdef  int init_params_d_N_wG
-cdef  int init_params_d_N_wL
-cdef  int init_params_d_N_wG_x_N_wL
-cdef  int init_params_d_N_total
-
-# work parameters:
-cdef  int init_params_d_Max_lines
-cdef  int init_params_d_N_lines
-cdef  int init_params_d_N_points_per_block
-cdef  int init_params_d_N_threads_per_block
-cdef  int init_params_d_N_blocks_per_grid
-cdef  int init_params_d_N_points_per_thread
-cdef  int init_params_d_Max_iterations_per_thread
-
-cdef  int init_params_d_shared_size_floats
+init_params_d_v_min = None
+init_params_d_v_max = None
+init_params_d_dv = None
+init_params_d_N_v = None
+init_params_d_N_wG = None
+init_params_d_N_wL = None
+init_params_d_N_wG_x_N_wL = None
+init_params_d_N_total = None
+init_params_d_Max_lines = None
+init_params_d_N_lines = None
+init_params_d_N_points_per_block = None
+init_params_d_N_threads_per_block = None
+init_params_d_N_blocks_per_grid = None
+init_params_d_N_points_per_thread = None
+init_params_d_Max_iterations_per_thread = None
+init_params_d_shared_size_floats = None
 
 
 ####################################
@@ -187,6 +183,7 @@ cdef  int init_params_d_shared_size_floats
 
 fillDLM_c_code = r'''
 extern "C"{
+#include<math.h>
 __global__ void fillDLM(
 	float* v0,
 	float* da,
@@ -197,35 +194,35 @@ __global__ void fillDLM(
 	float* log_2vMm,
 	float* global_DLM
     
-    double iter_params_d_p,
-    double iter_params_d_log_p,
-    double iter_params_d_dlog_T,
-    double iter_params_d_log_rT,
-    double iter_params_d_c2T,
-    double iter_params_d_rQ,
-    double iter_params_d_log_wG_min,
-    double iter_params_d_log_wL_min,
-    double iter_params_d_log_dwG,
-    double iter_params_d_log_dwL,
+    double* iter_params_d_p,
+    double* iter_params_d_log_p,
+    double* iter_params_d_dlog_T,
+    double* iter_params_d_log_rT,
+    double* iter_params_d_c2T,
+    double* iter_params_d_rQ,
+    double* iter_params_d_log_wG_min,
+    double* iter_params_d_log_wL_min,
+    double* iter_params_d_log_dwG,
+    double* iter_params_d_log_dwL,
     int* iter_params_d_blocks_line_offset,
     int* iter_params_d_blocks_iv_offset,
 
-    double init_params_d_v_min,
-    double init_params_d_v_max,
-    double init_params_d_dv,
-    long long init_params_d_N_v,
-    long long init_params_d_N_wG,
-    long long init_params_d_N_wL,
-    long long init_params_d_N_wG_x_N_wL,
-    long long init_params_d_N_total,
-    long long init_params_d_Max_lines,
-    long long init_params_d_N_lines,
-    long long init_params_d_N_points_per_block,
-    long long init_params_d_N_threads_per_block,
-    long long init_params_d_N_blocks_per_grid,
-    long long init_params_d_N_points_per_thread,
-    long long init_params_d_Max_iterations_per_thread,
-    long long init_params_d_shared_size_floats
+    double* init_params_d_v_min,
+    double* init_params_d_v_max,
+    double* init_params_d_dv,
+    long long* init_params_d_N_v,
+    long long* init_params_d_N_wG,
+    long long* init_params_d_N_wL,
+    long long* init_params_d_N_wG_x_N_wL,
+    long long* init_params_d_N_total,
+    long long* init_params_d_Max_lines,
+    long long* init_params_d_N_lines,
+    long long* init_params_d_N_points_per_block,
+    long long* init_params_d_N_threads_per_block,
+    long long* init_params_d_N_blocks_per_grid,
+    long long* init_params_d_N_points_per_thread,
+    long long* init_params_d_Max_iterations_per_thread,
+    long long* init_params_d_shared_size_floats
     ) {
 
 	
@@ -233,12 +230,12 @@ __global__ void fillDLM(
     int block_iv_offset = iter_params_d_blocks_iv_offset[blockIdx.x + gridDim.x * blockIdx.y];
 
 	int block_id = blockIdx.x + gridDim.x * blockIdx.y;
-	int N_iterations = (iter_params_d_blocks_line_offset[block_id + 1] - iter_params_d_blocks_line_offset[block_id]) / init_params_d_N_threads_per_block;
-	int DLM_offset = iter_params_d_blocks_iv_offset[block_id] * init_params_d_N_wG_x_N_wL;
+	int N_iterations = (iter_params_d_blocks_line_offset[block_id + 1] - iter_params_d_blocks_line_offset[block_id]) / init_params_d_N_threads_per_block[0];
+	int DLM_offset = iter_params_d_blocks_iv_offset[block_id] * init_params_d_N_wG_x_N_wL[0];
 	int iv_offset = iter_params_d_blocks_iv_offset[block_id];
 
-	int NwG = init_params_d_N_wG;
-	int NwGxNwL = init_params_d_N_wG_x_N_wL;
+	int NwG = init_params_d_N_wG[0];
+	int NwGxNwL = init_params_d_N_wG_x_N_wL[0];
 
 	////Allocate and zero the Shared memory
 	extern __shared__ float shared_DLM[];
@@ -252,35 +249,35 @@ __global__ void fillDLM(
 		
 		if (i < init_params_d_N_lines) {
 			//Calc v
-			float v_dat = v0[i] + iter_params_d_p * da[i];  // <----- PRESSURE SHIFT
-			float iv = (v_dat - init_params_d_v_min) / init_params_d_dv; //- iv_offset;
+			float v_dat = v0[i] + iter_params_d_p[0] * da[i];  // <----- PRESSURE SHIFT
+			float iv = (v_dat - init_params_d_v_min[0]) / init_params_d_dv[0]; //- iv_offset;
 			int iv0 = (int)iv;
 			int iv1 = iv0 + 1  ;
 
-			if ((iv0 >= 0) && (iv1 < init_params_d_N_v)) {
+			if ((iv0 >= 0) && (iv1 < init_params_d_N_v[0])) {
 
 				//Calc wG
-				float log_wG_dat = log_2vMm[i] + iter_params_d_hlog_T; // <---- POPULATION
-				float iwG = (log_wG_dat - iter_params_d_log_wG_min) / iter_params_d_log_dwG;
+				float log_wG_dat = log_2vMm[i] + iter_params_d_hlog_T[0]; // <---- POPULATION
+				float iwG = (log_wG_dat - iter_params_d_log_wG_min[0]) / iter_params_d_log_dwG[0];
 				int iwG0 = (int)iwG;
 				int iwG1 = iwG0 + 1;
 				//^8
 
 				//Calc wL
-				float log_wL_dat = log_2gs[i] + iter_params_d_log_p + na[i] * iter_params_d.log_rT;
-				float iwL = (log_wL_dat - iter_params_d.log_wL_min) / iter_params_d.log_dwL;
+				float log_wL_dat = log_2gs[i] + iter_params_d_log_p[0] + na[i] * iter_params_d_log_rT[0];
+				float iwL = (log_wL_dat - iter_params_d_log_wL_min[0]) / iter_params_d_log_dwL[0];
 				int iwL0 = (int)iwL;	
 				int iwL1 = iwL0 + 1;
 				//^12
 
 				//Calc I  	Line intensity
-				float I_add = iter_params_d_rQ * S0[i] * (expf(iter_params_d_c2T * El[i]) - expf(iter_params_d_c2T * (El[i] + v0[i])));
+				float I_add = iter_params_d_rQ[0] * S0[i] * (expf(iter_params_d_c2T[0] * El[i]) - expf(iter_params_d_c2T[0] * (El[i] + v0[i])));
 				
 				//  reducing the weak line code would come here
 
 				float av = iv - iv0;
-				float awG = (iwG - iwG0) * expf((iwG1 - iwG) * iter_params_d_log_dwG);
-				float awL = (iwL - iwL0) * expf((iwL1 - iwL) * iter_params_d_log_dwL);
+				float awG = (iwG - iwG0) * expf((iwG1 - iwG) * iter_params_d_log_dwG[0]);
+				float awL = (iwL - iwL0) * expf((iwL1 - iwL) * iter_params_d_log_dwL[0]);
 
 				float aV00 = (1 - awG) * (1 - awL);
 				float aV01 = (1 - awG) * awL;
@@ -313,6 +310,9 @@ fillDLM = fillDLM_module.get_function('fillDLM')
 
 applyLineshapes_c_code = r'''
 extern "C"{
+#include <cuda.h>
+#include <cuda_runtime_api.h>
+#include <cufft.h>
 __global__ void applyLineshapes(cufftComplex* DLM, 
                                 cufftComplex* spectrum
                                 // include iter_params_d
@@ -781,6 +781,23 @@ cdef void iterate(float p, float T, vector[float] spectrum_h):
 	#gpuHandleError(cudaMemcpyToSymbol(iter_params_d, iter_params_h, sizeof(iterData)))
     # --> should we copy all variables under iterparams or just the arrays
 
+    #### the issue is, CuPy only allows you to declare those objects on the device memory which can be passed as valid argument to the method np.array()
+    #### thus, while normal lists are easily declarable, single non-array variables are not. Instead, if we try to pass a single-value variable to the 
+    #### method, it works, but instead of returning `x`, we get back `np.array(x)`. While these 2 quantities are one and the same for all practical purposes
+    #### the only difference is the type of these 2 objects. While we can access both directly without any [<index>] notation, the first object is of type
+    #### float/int but the second is an array of type np.ndarray. Thus, while storing them in Cython and passing them to the kernel, we will be forced to pass
+    #### them as float*/int*, and *inside the kernel*, access the variable not with a simple 'x' but as `x[0]`.
+
+    iter_params_d_p = cp.array(iter_params_h_p)
+    iter_params_d_log_p = cp.array(iter_params_h_log_p)
+    iter_params_d_dlog_T = cp.array(iter_params_h_dlog_T)
+    iter_params_d_log_rT = cp.array(iter_params_h_log_rT)
+    iter_params_d_c2T = cp.array(iter_params_h_c2T)
+    iter_params_d_rQ = cp.array(iter_params_h_rQ)
+    iter_params_d_log_wG_min = cp.array(iter_params_h_log_wG_min)
+    iter_params_d_log_wL_min = cp.array(iter_params_h_log_wL_min)
+    iter_params_d_log_dwG = cp.array(iter_params_h_log_dwG)
+    iter_params_d_log_dwL = cp.array(iter_params_h_log_dwL)
     iter_params_d_blocks_line_offset = cp.array(iter_params_h_blocks_line_offset)
     iter_params_d_blocks_iv_offset = cp.array(iter_params_h_blocks_iv_offset)
 
@@ -824,7 +841,7 @@ cdef void iterate(float p, float T, vector[float] spectrum_h):
 
 	# inverse FFT
 	#cufftExecC2R(host_params_h_plan_spectrum, host_params_h_spectrum_d_in, host_params_h_spectrum_d_out)
-    host_params_h_spectrum_d_out = cp.fft.irfftn(host_params_h_spectrum_d_in)
+    host_params_h_spectrum_d_out = cp.fft.irfft(host_params_h_spectrum_d_in)
     cp.cuda.runtime.deviceSynchronize()
 
 	#gpuHandleError(cudaMemcpy(spectrum_h, host_params_h_spectrum_d, init_params_h_N_v * sizeof(float), cudaMemcpyDeviceToHost))
@@ -970,6 +987,8 @@ def start():
 	#gpuHandleError(cudaMalloc((void**)&iter_params_d, sizeof(iterData)));
 
 	# DLM is allocated once, but must be zero'd every iteration ---> not needed anymore
+
+    # when using CuPy, these lines are redundant...
 	#host_params_h_DLM_d = cp.cuda.runtime.malloc(2 * (init_params_h.N_v + 1) * init_params_h.N_wG_x_N_wL * getsizeof(float()))
 	#host_params_h.DLM_d_in = (cufftReal*)host_params_h.DLM_d;
 	#host_params_h.DLM_d_out = (cufftComplex*)host_params_h.DLM_d;
@@ -985,6 +1004,24 @@ def start():
 	# gpuHandleError(cudaMemcpyToSymbol(init_params_d, &init_params_h, sizeof(initData)));
     # ---> should I copy all the struct fields or let it be
 
+    # DLM spectral parameters
+    init_params_d_v_min = cp.array(init_params_h_v_min)
+    init_params_d_v_max = cp.array(init_params_h_v_max)
+    init_params_d_dv = cp.array(init_params_h_dv)
+    init_params_d_N_v = cp.array(init_params_h_N_v)
+    init_params_d_N_wG = cp.array(init_params_h_N_wG)
+    init_params_d_N_wL = cp.array(init_params_d_N_wL)
+    init_params_d_N_wG_x_N_wL = cp.array(init_params_h_N_wG_x_N_wL)
+    init_params_d_N_total = cp.array(init_params_d_N_total)
+    init_params_d_Max_lines = cp.array(init_params_h_Max_lines)
+    init_params_d_N_lines = cp.array(init_params_h_N_lines)
+    init_params_d_N_points_per_block = cp.array(init_params_h_N_points_per_block)
+    init_params_d_N_threads_per_block = cp.array(init_params_h_N_threads_per_block)
+    init_params_d_N_blocks_per_grid = cp.array(init_params_h_N_blocks_per_grid)
+    init_params_d_N_points_per_thread = cp.array(init_params_h_N_points_per_thread)
+    init_params_d_Max_iterations_per_thread = cp.array(init_params_h_Max_iterations_per_thread)
+    init_params_d_shared_size_floats = cp.array(init_params_h_shared_size_floats)
+
 	#Copy spectral data to device
     host_params_h_v0_d = cp.array(spec_h_v0)
     host_params_h_da_d = cp.array(spec_h_da)
@@ -995,18 +1032,20 @@ def start():
     host_params_h_log_2vMm_d = cp.array(spec_h_log_2vMm)
 	print("Done!")
 
-	print("Planning FFT's... ")
+	#print("Planning FFT's... ")
 	# Plan DLM FFT
-	cdef int n_fft[] = { 2 * init_params_h_N_v };
-	# This can be replaced by CuPy.fft
-	cufftCreate(&host_params_h_plan_DLM);
-	cufftPlanMany(&host_params_h_plan_DLM, 1, n_fft,
-		n_fft, init_params_h_N_wG_x_N_wL, 1,
-		n_fft, init_params_h_N_wG_x_N_wL, 1, CUFFT_R2C, init_params_h_N_wG_x_N_wL);
+	# this is not needed in case of CuPy
 
-	cufftCreate(&host_params_h_plan_spectrum);
-	cufftPlan1d(&host_params_h_plan_spectrum, n_fft[0], CUFFT_C2R, 1);
-	print("Done!")
+    # cdef int n_fft[] = { 2 * init_params_h_N_v };
+	# # This can be replaced by CuPy.fft
+	# cufftCreate(&host_params_h_plan_DLM);
+	# cufftPlanMany(&host_params_h_plan_DLM, 1, n_fft,
+	#	n_fft, init_params_h_N_wG_x_N_wL, 1,
+	#	n_fft, init_params_h_N_wG_x_N_wL, 1, CUFFT_R2C, init_params_h_N_wG_x_N_wL);
+
+	# cufftCreate(&host_params_h_plan_spectrum);
+	# cufftPlan1d(&host_params_h_plan_spectrum, n_fft[0], CUFFT_C2R, 1);
+	# print("Done!")
 	print("Press any key to start iterations...")
 	_ = input()
 
@@ -1039,140 +1078,3 @@ def start():
 
 
 
-
-
-
-########## JUNK: INGORE ALL THIS #################3
-# P.S. kept for syntax/reference
-
-
-#cdef  void c_init_lorentzian_params(vector[float] log_2gS, vector[float] na):
-
-# def set_val():
-#     global iter_params_h_log_wL_min 
-#     iter_params_h_log_wL_min = -69
-#     return
-
-# def get_val():
-#     global iter_params_h_log_wL_min 
-#     print("the value you are looking for = {0}".format(iter_params_h_log_wL_min))
-#     return iter_params_h_log_wL_min
-
-
-
-
-# cdef   from "c_struct.c":
-#     ctypedef struct spectralData:
-#         float* v0
-#         float* da
-#         float* S0
-#         float* El
-#         float* log_2vMm
-#         float* na
-#         float* log_2gs
-
-#     ctypedef struct initData:
-#         float v_min
-#         float v_max	# Host only
-#         float dv
-
-#         # DLM sizes:
-#         int N_v
-#         int N_wG
-#         int N_wL
-#         int N_wG_x_N_wL
-#         int N_total
-
-#         # Work parameters :
-#         int Max_lines
-#         int N_lines
-#         int N_points_per_block
-#         int N_threads_per_block
-#         int N_blocks_per_grid
-#         int N_points_per_thread
-#         int	Max_iterations_per_thread
-
-#         int shared_size_floats
-    
-#     ctypedef struct blockData:
-#         int line_offset
-#         # int N_iterations
-#         int iv_offset
-    
-#     ctypedef struct iterData:
-#         # Any info needed for the Kernel that does not change during 
-#         # kernel execution but MAY CHANGE during spectral iteration step
-
-#         # Pressure & temperature:
-#         float p
-#         # float T
-#         float log_p
-#         float hlog_T
-#         float log_rT
-#         float c2T
-#         float rQ
-
-#         # Spectral parameters:
-#         float log_wG_min
-#         float log_wL_min
-#         float log_dwG
-#         float log_dwL
-
-#         # Block data:
-#         blockData blocks[4096] 
-    
-#     spectralData init_spectralData()
-
-
-# # # Then we describe a class that has a Point member "pt"
-# cdef  class py_spectralData:
-#     cdef  spectralData sd
-
-#     def __init__(self):
-#         self.sd = init_spectralData()
-#         self.sd.v0 = NULL
-#         self.sd.da = NULL
-#         self.sd.S0 = NULL
-#         self.sd.El = NULL
-#         self.sd.log_2vMm = NULL
-#         self.sd.na = NULL
-#         self.sd.log_2gs = NULL
-
-#     @v0.setter
-#     def v0(self,val):
-#     #    cdef  float* v0_ptr = <float*> val.data
-#         self.sd.v0 = <float *> val.data
-    
-#     # @property
-#     # def v0(self):
-#     #     cdef  float* v0_ptr = <float*> self.sd.v0.data
-#     #     return v0_ptr
-
-# cdef   from "point.c":
-#     ctypedef struct Point:
-#         int x
-#         int y
-#     Point make_and_send_point(int x, int y)
-
-# cdef  class PyPoint:
-#     cdef  Point p
-
-#     def __init__(self, x, y):
-#         self.p = make_and_send_point(x, y)
-
-#      # define properties in the normal Python way
-#     @property
-#     def x(self):
-#         return self.p.x
-
-#     @x.setter
-#     def x(self,val):
-#         self.p.x = val
-
-#     # @property
-#     # def y(self):
-#     #     return self.pt.y
-
-#     # @y.setter
-#     # def y(self,val):
-#     #     self.pt.y = val
