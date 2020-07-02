@@ -60,15 +60,25 @@ cdef  float host_params_h_elapsedTimeDLM
 #cdef  cufftHandle host_params_h_plan_spectrum
 
 # device pointers
-cdef  float* host_params_h_v0_d
-cdef  float* host_params_h_da_d
-cdef  float* host_params_h_S0_d
-cdef  float* host_params_h_El_d
-cdef  float* host_params_h_log_2gs_d
-cdef  float* host_params_h_na_d
-cdef  float* host_params_h_log_2vMm_d
-cdef  float* host_params_h_DLM_d
-cdef  float* host_params_h_spectrum_d
+# cdef  float* host_params_h_v0_d
+# cdef  float* host_params_h_da_d
+# cdef  float* host_params_h_S0_d
+# cdef  float* host_params_h_El_d
+# cdef  float* host_params_h_log_2gs_d
+# cdef  float* host_params_h_na_d
+# cdef  float* host_params_h_log_2vMm_d
+# cdef  float* host_params_h_DLM_d
+# cdef  float* host_params_h_spectrum_d
+
+host_params_h_v0_d = None
+host_params_h_da_d = None
+host_params_h_S0_d = None
+host_params_h_El_d = None
+host_params_h_log_2gs_d = None
+host_params_h_na_d = None
+host_params_h_log_2vMm_d = None
+host_params_h_DLM_d = None
+host_params_h_spectrum_d = None
 
 # defined in 'iterate'
 host_params_h_DLM_d_in = None
@@ -137,21 +147,21 @@ cdef int iter_params_h_blocks_iv_offset[4096]
 #       spectralData: spec_h                #
 #--------------------------------------------
 
-# cdef  vector[float] spec_h_v0
-# cdef  vector[float] spec_h_da
-# cdef  vector[float] spec_h_S0
-# cdef  vector[float] spec_h_El
-# cdef  vector[float] spec_h_log_2vMm
-# cdef  vector[float] spec_h_na
-# cdef  vector[float] spec_h_log_2gs
+cdef  vector[float] spec_h_v0
+cdef  vector[float] spec_h_da
+cdef  vector[float] spec_h_S0
+cdef  vector[float] spec_h_El
+cdef  vector[float] spec_h_log_2vMm
+cdef  vector[float] spec_h_na
+cdef  vector[float] spec_h_log_2gs
 
-cdef float* spec_h_v0
-cdef float* spec_h_da
-cdef float* spec_h_S0
-cdef float* spec_h_El
-cdef float* spec_h_log_2vMm
-cdef float* spec_h_na
-cdef float* spec_h_log_2gs
+# cdef float* spec_h_v0
+# cdef float* spec_h_da
+# cdef float* spec_h_S0
+# cdef float* spec_h_El
+# cdef float* spec_h_log_2vMm
+# cdef float* spec_h_na
+# cdef float* spec_h_log_2gs
 
 #--------------------------------------------
 
@@ -193,6 +203,23 @@ iter_params_d_log_dwG = None
 iter_params_d_log_dwL = None
 iter_params_d_blocks_line_offset = None
 iter_params_d_blocks_iv_offset = None
+
+
+
+####################################
+
+v0 = np.array(0,dtype="float")
+da = np.array(0,dtype="float")
+S0 = np.array(0,dtype="float")
+El = np.array(0,dtype="float")
+log_2vMm = np.array(0,dtype="float")
+na = np.array(0,dtype="float")
+log_2gs = np.array(0,dtype="float")
+v0_dec = np.array(0,dtype="float")
+da_dec = np.array(0,dtype="float")
+
+spectrum_h = np.array(0,dtype="float")
+v_arr = np.array(0,dtype="float")
 
 
 ####################################
@@ -332,9 +359,36 @@ applyLineshapes_c_code = r'''
 #include<cupy/complex.cuh>
 extern "C"{
 __global__ void applyLineshapes(complex<float>* DLM, 
-                                complex<float>* spectrum
-                                // include iter_params_d
-                                // include init_params_d
+                                complex<float>* spectrum,
+                                double iter_params_d_p,
+                                double iter_params_d_log_p,
+                                double iter_params_d_dlog_T,
+                                double iter_params_d_log_rT,
+                                double iter_params_d_c2T,
+                                double iter_params_d_rQ,
+                                double iter_params_d_log_wG_min,
+                                double iter_params_d_log_wL_min,
+                                double iter_params_d_log_dwG,
+                                double iter_params_d_log_dwL,
+                                int* iter_params_d_blocks_line_offset,
+                                int* iter_params_d_blocks_iv_offset,
+
+                                double init_params_d_v_min,
+                                double init_params_d_v_max,
+                                double init_params_d_dv,
+                                long long init_params_d_N_v,
+                                long long init_params_d_N_wG,
+                                long long init_params_d_N_wL,
+                                long long init_params_d_N_wG_x_N_wL,
+                                long long init_params_d_N_total,
+                                long long init_params_d_Max_lines,
+                                long long init_params_d_N_lines,
+                                long long init_params_d_N_points_per_block,
+                                long long init_params_d_N_threads_per_block,
+                                long long init_params_d_N_blocks_per_grid,
+                                long long init_params_d_N_points_per_thread,
+                                long long init_params_d_Max_iterations_per_thread,
+                                long long init_params_d_shared_size_floats
                                 ) {
 
 	const float pi = 3.141592653589793f;
@@ -417,9 +471,11 @@ def read_npy(fname, arr):
     arr = np.load(fname)
     print("Done!")
 
-cdef void init_lorentzian_params(vector[float] log_2gs, vector[float] na):
+cdef void init_lorentzian_params(): #vector[float] log_2gs, vector[float] na):
 
     # ----------- setup global variables -----------------
+    global log_2gs
+    global na
     global host_params_h_top_a
     global host_params_h_top_b
     global host_params_h_top_x
@@ -622,9 +678,10 @@ cdef void calc_lorentzian_params():
     return 
 
 
-cdef void init_gaussian_params(vector[float] log_2vMm):
+cdef void init_gaussian_params(): #vector[float] log_2vMm):
 
     # ----------- setup global variables -----------------
+    global log_2vMm
     global host_params_h_log_2vMm_min
     global host_params_h_log_2vMm_max
     #------------------------------------------------------
@@ -695,8 +752,6 @@ cdef int prepare_blocks():
     global init_params_h_Max_iterations_per_thread
     global init_params_h_v_min
     global init_params_h_dv
-
-    global epsilon
     #------------------------------------------------------
 
     cdef float* v0 = host_params_h_v0_dec
@@ -754,16 +809,29 @@ cdef int prepare_blocks():
 #    return
 
 
-cdef void iterate(float p, float T, vector[float] spectrum_h):
+cdef void iterate(float p, float T):
     
     # ----------- setup global variables -----------------
+    global spectrum_h
+
     global host_params_h_start
+
+    global host_params_h_start_DLM
     global host_params_h_DLM_d
+    global host_params_h_DLM_d_in
+    global host_params_h_DLM_d_out
+    global host_params_h_stop_DLM
+    global host_params_h_elapsedTimeDLM
+
+    #global host_params_h_shared_size
+    global host_params_h_spectrum_d
+    global host_params_h_spectrum_d_in
+    global host_params_h_spectrum_d_out    
+
+    global init_params_h_N_threads_per_block
     global init_params_h_N_v
     global init_params_h_N_wG_x_N_wL
-    global host_params_h_start_DLM
-    global init_params_h_N_threads_per_block
-    global host_params_h_shared_size
+
     global host_params_h_v0_d
     global host_params_h_da_d
     global host_params_h_S0_d
@@ -771,22 +839,52 @@ cdef void iterate(float p, float T, vector[float] spectrum_h):
     global host_params_h_log_2gs_d
     global host_params_h_na_d
     global host_params_h_log_2vMm_d
-    global host_params_h_DLM_d
-    global host_params_h_stop_DLM
-    global host_params_h_elapsedTimeDLM
-    global host_params_h_plan_DLM
-    global host_params_h_DLM_d_in
-    global host_params_h_DLM_d_out
-    global host_params_h_spectrum_d_in
-    global host_params_h_plan_spectrum
-    global host_params_h_spectrum_d_out
-    global spectrum_h
-    global host_params_h_spectrum_d
+
     global host_params_h_stop
     global host_params_h_elapsedTime
+
+    global iter_params_h_p
+    global iter_params_h_log_p
+    global iter_params_h_hlog_T
+    global iter_params_h_log_rT
+    global iter_params_h_c2T
+    global iter_params_h_rQ
+    global iter_params_h_log_wG_min
+    global iter_params_h_log_wL_min
     global iter_params_h_log_dwG
     global iter_params_h_log_dwL
-    global epsilon
+    global iter_params_h_blocks_line_offset
+    global iter_params_h_blocks_iv_offset
+
+    global init_params_d_v_min
+    global init_params_d_v_max
+    global init_params_d_dv
+    global init_params_d_N_v
+    global init_params_d_N_wG
+    global init_params_d_N_wL
+    global init_params_d_N_wG_x_N_wL
+    global init_params_d_N_total
+    global init_params_d_Max_lines
+    global init_params_d_N_lines
+    global init_params_d_N_points_per_block
+    global init_params_d_N_threads_per_block
+    global init_params_d_N_blocks_per_grid
+    global init_params_d_N_points_per_thread
+    global init_params_d_Max_iterations_per_thread
+    global init_params_d_shared_size_floats
+
+    global iter_params_d_p
+    global iter_params_d_log_p
+    global iter_params_d_hlog_T
+    global iter_params_d_log_rT
+    global iter_params_d_c2T
+    global iter_params_d_rQ
+    global iter_params_d_log_wG_min
+    global iter_params_d_log_wL_min
+    global iter_params_d_log_dwG
+    global iter_params_d_log_dwL
+    global iter_params_d_blocks_line_offset
+    global iter_params_d_blocks_iv_offset
     #------------------------------------------------------
 
     host_params_h_start.record()
@@ -799,15 +897,6 @@ cdef void iterate(float p, float T, vector[float] spectrum_h):
 
 	# Copy iter_params to device
 	#gpuHandleError(cudaMemcpyToSymbol(iter_params_d, iter_params_h, sizeof(iterData)))
-
-    #### the issue is, CuPy only allows you to declare those objects on the device memory which can be passed as valid argument to the method np.array()
-    #### thus, while normal lists are easily declarable, single non-array variables are not. Instead, if we try to pass a single-value variable to the 
-    #### method, it works, but instead of returning `x`, we get back `np.array(x)`. While these 2 quantities are one and the same for all practical purposes
-    #### the only difference is the type of these 2 objects. While we can access both directly without any [<index>] notation, the first object is of type
-    #### float/int but the second is an array of type np.ndarray. Thus, while storing them in Cython and passing them to the kernel, we will be forced to pass
-    #### them as float*/int*, and *inside the kernel*, access the variable not with a simple 'x' but as `x[0]`.
-
-    ## UPDATE: the above issue no longer exists, we can use cp.float/int to transfer single variables to the device
 
     iter_params_d_p =                   cp.float32(iter_params_h_p)
     iter_params_d_log_p =               cp.float32(iter_params_h_log_p)
@@ -823,16 +912,15 @@ cdef void iterate(float p, float T, vector[float] spectrum_h):
     iter_params_d_blocks_iv_offset =    cp.array(iter_params_h_blocks_iv_offset)
 
 	# Zero DLM:
-	#gpuHandleError(cudaMemset(host_params_h_DLM_d, 0, 2 * (init_params_h_N_v + 1) * init_params_h_N_wG_x_N_wL * sizeof(float)))
-    # cp.cuda.runtime.memset(host_params_h_DLM_d, 0, 2*(init_params_h_N_v+1)*init_params_h_N_wG_x_N_wL * getsizeof(float()))
-    host_params_h_DLM_d = cp.zeros(2*(init_params_h_N_v+1)*init_params_h_N_wG_x_N_wL, dtype=cp.float32)
+    host_params_h_DLM_d.fill(0)  #gpuHandleError(cudaMemset(host_params_h_DLM_d, 0, 2 * (init_params_h_N_v + 1) * init_params_h_N_wG_x_N_wL * sizeof(float)))
 
     print("Getting ready...")
 	# Launch Kernel:
     host_params_h_start_DLM.record()
 
 	# from population calculation to calculating the line set
-    fillDLM ((n_blocks,), (init_params_h_N_threads_per_block,), host_params_h_shared_size (
+    fillDLM ((n_blocks,), (init_params_h_N_threads_per_block,), #host_params_h_shared_size 
+        (
 		host_params_h_v0_d,
 		host_params_h_da_d,
 		host_params_h_S0_d,
@@ -840,7 +928,39 @@ cdef void iterate(float p, float T, vector[float] spectrum_h):
 		host_params_h_log_2gs_d,
 		host_params_h_na_d,
 		host_params_h_log_2vMm_d,
-		host_params_h_DLM_d))
+		host_params_h_DLM_d,
+
+        iter_params_d_p,
+        iter_params_d_log_p,
+        iter_params_d_hlog_T,
+        iter_params_d_log_rT,
+        iter_params_d_c2T,
+        iter_params_d_rQ,
+        iter_params_d_log_wG_min,
+        iter_params_d_log_wL_min,
+        iter_params_d_log_dwG,
+        iter_params_d_log_dwL,
+        iter_params_d_blocks_line_offset,
+        iter_params_d_blocks_iv_offset,
+
+        init_params_d_v_min,
+        init_params_d_v_max,
+        init_params_d_dv,
+        init_params_d_N_v,
+        init_params_d_N_wG,
+        init_params_d_N_wL,
+        init_params_d_N_wG_x_N_wL,
+        init_params_d_N_total,
+        init_params_d_Max_lines,
+        init_params_d_N_lines,
+        init_params_d_N_points_per_block,
+        init_params_d_N_threads_per_block,
+        init_params_d_N_blocks_per_grid,
+        init_params_d_N_points_per_thread,
+        init_params_d_Max_iterations_per_thread,
+        init_params_d_shared_size_floats
+       
+        ))
 
     host_params_h_stop_DLM.record()
     cp.cuda.runtime.eventSynchronize(host_params_h_stop_DLM_ptr)
@@ -850,23 +970,56 @@ cdef void iterate(float p, float T, vector[float] spectrum_h):
     cp.cuda.runtime.deviceSynchronize()
 
 	# FFT
-	#cufftExecR2C(host_params_h_plan_DLM, host_params_h_DLM_d_in, host_params_h_DLM_d_out)
-    host_params_h_DLM_d_out = cp.fft.rfftn(host_params_h_DLM_d_in)
+    # figure out how host_params_h_DLM_d_in points to the same memory location as host_params_h_DLM_d
+    host_params_h_DLM_d_out = cp.fft.rfftn(host_params_h_DLM_d_in) #cufftExecR2C(host_params_h_plan_DLM, host_params_h_DLM_d_in, host_params_h_DLM_d_out)
     cp.cuda.runtime.deviceSynchronize()
 
     cdef int n_threads = 1024
     n_blocks = (init_params_h_N_v + 1) / n_threads + 1
 
-    apply_lineshapes (( n_blocks,), (n_threads,), (host_params_h_DLM_d_out, host_params_h_spectrum_d_in))
+    apply_lineshapes (( n_blocks,), (n_threads,), 
+    (
+        host_params_h_DLM_d_out, 
+        host_params_h_spectrum_d_in,
+
+        iter_params_d_p,
+        iter_params_d_log_p,
+        iter_params_d_hlog_T,
+        iter_params_d_log_rT,
+        iter_params_d_c2T,
+        iter_params_d_rQ,
+        iter_params_d_log_wG_min,
+        iter_params_d_log_wL_min,
+        iter_params_d_log_dwG,
+        iter_params_d_log_dwL,
+        iter_params_d_blocks_line_offset,
+        iter_params_d_blocks_iv_offset,
+
+        init_params_d_v_min,
+        init_params_d_v_max,
+        init_params_d_dv,
+        init_params_d_N_v,
+        init_params_d_N_wG,
+        init_params_d_N_wL,
+        init_params_d_N_wG_x_N_wL,
+        init_params_d_N_total,
+        init_params_d_Max_lines,
+        init_params_d_N_lines,
+        init_params_d_N_points_per_block,
+        init_params_d_N_threads_per_block,
+        init_params_d_N_blocks_per_grid,
+        init_params_d_N_points_per_thread,
+        init_params_d_Max_iterations_per_thread,
+        init_params_d_shared_size_floats
+    )
+    )
     cp.cuda.runtime.deviceSynchronize()
 
 	# inverse FFT
-	#cufftExecC2R(host_params_h_plan_spectrum, host_params_h_spectrum_d_in, host_params_h_spectrum_d_out)
-    host_params_h_spectrum_d_out = cp.fft.irfft(host_params_h_spectrum_d_in)
+    host_params_h_spectrum_d_out = cp.fft.irfft(host_params_h_spectrum_d_in) #	#cufftExecC2R(host_params_h_plan_spectrum, host_params_h_spectrum_d_in, host_params_h_spectrum_d_out)
     cp.cuda.runtime.deviceSynchronize()
 
-	#gpuHandleError(cudaMemcpy(spectrum_h, host_params_h_spectrum_d, init_params_h_N_v * sizeof(float), cudaMemcpyDeviceToHost))
-    spectrum_h = host_params_h_spectrum_d.get()
+    spectrum_h = host_params_h_spectrum_d.get()  ##gpuHandleError(cudaMemcpy(spectrum_h, host_params_h_spectrum_d, init_params_h_N_v * sizeof(float), cudaMemcpyDeviceToHost))
 	# end of voigt broadening
 	# spectrum_h is the k nu
 	
@@ -885,20 +1038,63 @@ cdef void iterate(float p, float T, vector[float] spectrum_h):
     return
 
 def start():
+
+    # ----------- setup global variables -----------------
+    global v0
+    global da
+    global S0 
+    global El 
+    global log_2vMm 
+    global na 
+    global log_2gs 
+    global v0_dec 
+    global da_dec 
+    global spectrum_h
+    global v_arr
+
+    global init_params_h_v_min
+    global init_params_h_v_max
+    global init_params_h_dv
+    global init_params_h_N_v
+    global init_params_h_N_wG
+    global init_params_h_N_wL
+    global init_params_h_N_wG_x_N_wL
+    global init_params_h_N_total
+    global init_params_h_Max_lines
+    global init_params_h_N_lines
+    global init_params_h_N_points_per_block
+    global init_params_h_N_threads_per_block
+    global init_params_h_N_blocks_per_grid
+    global init_params_h_N_points_per_thread
+    global init_params_h_Max_iterations_per_thread
+    global init_params_h_shared_size_floats
+
+    global init_params_d_v_min
+    global init_params_d_v_max
+    global init_params_d_dv
+    global init_params_d_N_v
+    global init_params_d_N_wG
+    global init_params_d_N_wL
+    global init_params_d_N_wG_x_N_wL
+    global init_params_d_N_total
+    global init_params_d_Max_lines
+    global init_params_d_N_lines
+    global init_params_d_N_points_per_block
+    global init_params_d_N_threads_per_block
+    global init_params_d_N_blocks_per_grid
+    global init_params_d_N_points_per_thread
+    global init_params_d_Max_iterations_per_thread
+    global init_params_d_shared_size_floats
+
+    global spec_h_v0
+    global spec_h_da
+    global spec_h_S0
+    global spec_h_El
+    global spec_h_log_2vMm
+    global spec_h_na
+    global spec_h_log_2gs
+    #-----------------------------------------------------
     dir_path = '/home/pankaj/radis-lab/'
-
-    v0 = np.array(0,dtype="float")
-    da = np.array(0,dtype="float")
-    S0 = np.array(0,dtype="float")
-    El = np.array(0,dtype="float")
-    log_2vMm = np.array(0,dtype="float")
-    na = np.array(0,dtype="float")
-    log_2gs = np.array(0,dtype="float")
-    v0_dec = np.array(0,dtype="float")
-    da_dec = np.array(0,dtype="float")
-
-    spectrum_h = np.array(0,dtype="float")
-    v_arr = np.array(0,dtype="float")
 
     init_params_h_v_min = 1750.0
     init_params_h_v_max = 2400.0
@@ -916,14 +1112,14 @@ def start():
     host_params_h_shared_size = 0x8000          # Bytes - Size of the shared memory
     host_params_h_Min_threads_per_block = 128   # Ensures a full warp from each of the 4 processors
     host_params_h_Max_threads_per_block = 1024  # Maximum determined by device parameters
-    init_params_h_shared_size_floats = host_params_h_shared_size / sys.getsizeof(float());
+    init_params_h_shared_size_floats = host_params_h_shared_size / sys.getsizeof(float())
 
-    init_params_h_N_wG_x_N_wL = init_params_h_N_wG * init_params_h_N_wL;
-    init_params_h_N_total = init_params_h_N_wG_x_N_wL * init_params_h_N_v;
-    init_params_h_N_points_per_block = init_params_h_shared_size_floats / init_params_h_N_wG_x_N_wL;
-    init_params_h_N_threads_per_block = 1024;
-    init_params_h_N_blocks_per_grid = 4 * 256 * 256;
-    init_params_h_N_points_per_thread = init_params_h_N_points_per_block / init_params_h_N_threads_per_block;
+    init_params_h_N_wG_x_N_wL = init_params_h_N_wG * init_params_h_N_wL
+    init_params_h_N_total = init_params_h_N_wG_x_N_wL * init_params_h_N_v
+    init_params_h_N_points_per_block = init_params_h_shared_size_floats / init_params_h_N_wG_x_N_wL
+    init_params_h_N_threads_per_block = 1024
+    init_params_h_N_blocks_per_grid = 4 * 256 * 256
+    init_params_h_N_points_per_thread = init_params_h_N_points_per_block / init_params_h_N_threads_per_block
 
     print()
     print("Spectral points per block  : {0}".format(init_params_h_N_points_per_block))
@@ -939,12 +1135,11 @@ def start():
     read_npy(dir_path+'da.npy', da)
     spec_h_da = da
 
-    #decimate (v0, v0_dec, init_params_h_N_threads_per_block)
-    v0_dec = np.minimum.reduceat(v0, np.arange(0, len(v0), init_params_h_N_threads_per_block))
+    v0_dec = np.minimum.reduceat(v0, np.arange(0, len(v0), init_params_h_N_threads_per_block))     #decimate (v0, v0_dec, init_params_h_N_threads_per_block)
     host_params_h_v0_dec = v0_dec
     host_params_h_dec_size = len(v0_dec)
-    #decimate (da, da_dec, init_params_h_N_threads_per_block)
-    da_dec = np.minimum.reduceat(da, np.arange(0, len(da), init_params_h_N_threads_per_block))
+
+    da_dec = np.minimum.reduceat(da, np.arange(0, len(da), init_params_h_N_threads_per_block)) #decimate (da, da_dec, init_params_h_N_threads_per_block)
     host_params_h_da_dec = da_dec
     print()
 
@@ -954,14 +1149,14 @@ def start():
     spec_h_log_2gs = log_2gs
     read_npy(dir_path + 'na.npy', na)
     spec_h_na = na
-    init_lorentzian_params(log_2gs, na)
+    init_lorentzian_params()
     print()
 
     # wG inits:
     print("Init wG: ")
     read_npy(dir_path + 'log_2vMm.npy', log_2vMm)
     spec_h_log_2vMm = log_2vMm
-    init_gaussian_params(log_2vMm)
+    init_gaussian_params()
     print()
 
     # I inits:
@@ -980,9 +1175,9 @@ def start():
 
     # start the CUDA work
 
+    cp.cuda.runtime.setDevice(0) #gpuHandleError(cudaSetDevice(0));
 
-	#gpuHandleError(cudaSetDevice(0));
-    #gpuHandleError(cudaFuncSetAttribute(fillDLM, cudaFuncAttributeMaxDynamicSharedMemorySize, host_params_h.shared_size));
+    #gpuHandleError(cudaFuncSetAttribute(fillDLM, cudaFuncAttributeMaxDynamicSharedMemorySize, host_params_h.shared_size));   <------- how to do this is CuPy?
 
     # not needed as declared in the global space ----------------->
 
@@ -990,7 +1185,6 @@ def start():
 	#gpuHandleError(cudaEventCreate(&host_params_h.start_DLM));
 	#gpuHandleError(cudaEventCreate(&host_params_h.stop));
 	#gpuHandleError(cudaEventCreate(&host_params_h.stop_DLM));
-
 
 	#Device memory allocations:
 	#TARGET: These will all be made redundant by CuPy memory transfers
@@ -1002,20 +1196,19 @@ def start():
 	# gpuHandleError(cudaMalloc((void**)&host_params_h.na_d, init_params_h.N_lines * sizeof(float)));
 	# gpuHandleError(cudaMalloc((void**)&host_params_h.log_2vMm_d, init_params_h.N_lines * sizeof(float)));
 
-    # <------------------------------------------------------------
+	#gpuHandleError(cudaMalloc((void**)&init_params_d, sizeof(initData)));      <-- dont't have to allocate memory, happens automatically when moving to device
+	#gpuHandleError(cudaMalloc((void**)&iter_params_d, sizeof(iterData)));      <-- same as above
 
-	#gpuHandleError(cudaMalloc((void**)&init_params_d, sizeof(initData)));
-	#gpuHandleError(cudaMalloc((void**)&iter_params_d, sizeof(iterData)));
+    # <--------------------------------------------------------------
 
 	# DLM is allocated once, but must be zero'd every iteration ---> not needed anymore
 
     # when using CuPy, these lines are redundant...
-	#host_params_h_DLM_d = cp.cuda.runtime.malloc(2 * (init_params_h.N_v + 1) * init_params_h.N_wG_x_N_wL * getsizeof(float()))
-	#host_params_h.DLM_d_in = (cufftReal*)host_params_h.DLM_d;
+    host_params_h_DLM_d = cp.zeros(2 * (init_params_h_N_v + 1) * init_params_h_N_wG_x_N_wL, dtype=cp.float32)
+	#host_params_h.DLM_d_in = (cufftReal*)host_params_h.DLM_d;                   <-- how are these going to work?
 	#host_params_h.DLM_d_out = (cufftComplex*)host_params_h.DLM_d;
 
-	#gpuHandleError(cudaMalloc((void**)&host_params_h.spectrum_d, 2 * (init_params_h.N_v + 1) * sizeof(float)));
-    host_params_h_spectrum_d = cp.zeros(2*(init_params_h_N_v + 1) * sys.getsizeof(float()))
+    host_params_h_spectrum_d = cp.zeros(2*(init_params_h_N_v + 1), dtype=cp.float32)
 	#host_params_h.spectrum_d_in = (cufftComplex*)host_params_h.spectrum_d;
 	#host_params_h.spectrum_d_out = (cufftReal*)host_params_h.spectrum_d;
     print("Done!")
@@ -1024,9 +1217,7 @@ def start():
 	# Copy params to device
     print("Copying data to device... ")
 	# gpuHandleError(cudaMemcpyToSymbol(init_params_d, &init_params_h, sizeof(initData)));
-    # ---> should I copy all the struct fields or let it be
 
-    # DLM spectral parameters
     init_params_d_v_min =                       cp.float32(init_params_h_v_min)
     init_params_d_v_max =                       cp.float32(init_params_h_v_max)
     init_params_d_dv =                          cp.float32(init_params_h_dv)
@@ -1045,19 +1236,19 @@ def start():
     init_params_d_shared_size_floats =          cp.int32(init_params_h_shared_size_floats)
 
 	#Copy spectral data to device
-    host_params_h_v0_d = cp.array(spec_h_v0)
-    host_params_h_da_d = cp.array(spec_h_da)
-    host_params_h_S0_d = cp.array(spec_h_S0)
-    host_params_h_El_d = cp.array(spec_h_El)
-    host_params_h_log_2gs_d = cp.array(spec_h_log_2gs)
-    host_params_h_na_d = cp.array(spec_h_na)
-    host_params_h_log_2vMm_d = cp.array(spec_h_log_2vMm)
+    host_params_h_v0_d =        cp.array(spec_h_v0)
+    host_params_h_da_d =        cp.array(spec_h_da)
+    host_params_h_S0_d =        cp.array(spec_h_S0)
+    host_params_h_El_d =        cp.array(spec_h_El)
+    host_params_h_log_2gs_d =   cp.array(spec_h_log_2gs)
+    host_params_h_na_d =        cp.array(spec_h_na)
+    host_params_h_log_2vMm_d =  cp.array(spec_h_log_2vMm)
     
     print("Done!")
 
 	#print("Planning FFT's... ")
 	# Plan DLM FFT
-	# this is not needed in case of CuPy
+	# this is not needed in case of CuPy -------------------->
 
     # cdef int n_fft[] = { 2 * init_params_h_N_v };
 	# # This can be replaced by CuPy.fft
@@ -1069,6 +1260,9 @@ def start():
 	# cufftCreate(&host_params_h_plan_spectrum);
 	# cufftPlan1d(&host_params_h_plan_spectrum, n_fft[0], CUFFT_C2R, 1);
 	# print("Done!")
+
+    # <--------------------------------------------------------
+
     print("Press any key to start iterations...")
     _ = input()
 
@@ -1083,7 +1277,7 @@ def start():
     dT = 500.0
 
     for T in range(T_min, T_max, dT):
-        iterate(p, T, spectrum_h)
+        iterate(p, T)
     return
 
     #Cleanup and go home:
