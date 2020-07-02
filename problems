@@ -1,0 +1,13 @@
+import py_structs as pys
+import numpy as np
+a = [i for i in range(10)]
+a = np.asarray(a)
+a = a.astype('float')
+b = np.zeros(0, dtype='float')
+
+
+
+PROBLEMS FACED:
+
+1. if I declare variables in cython, I cannot call them to Python using the module
+2. even inside the .pyx file, need to use global variable declaration

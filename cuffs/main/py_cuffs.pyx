@@ -37,8 +37,8 @@ cdef  vector[float] host_params_h_bottom_a
 cdef  vector[float] host_params_h_bottom_b
 
 cdef  int host_params_h_dec_size
-cdef  float* host_params_h_v0_dec
-cdef  float* host_params_h_da_dec
+cdef  vector[float] host_params_h_v0_dec
+cdef  vector[float] host_params_h_da_dec
 
 cdef  int host_params_h_shared_size
 
@@ -230,8 +230,9 @@ v_arr = np.array(0,dtype="float")
 # fillDLM
 
 fillDLM_c_code = r'''
+
+#include<cupy/complex.cuh>
 extern "C"{
-#include<math.h>
 __global__ void fillDLM(
 	float* v0,
 	float* da,
@@ -240,11 +241,11 @@ __global__ void fillDLM(
 	float* log_2gs,
 	float* na,
 	float* log_2vMm,
-	float* global_DLM
+	float* global_DLM,
     
     double iter_params_d_p,
     double iter_params_d_log_p,
-    double iter_params_d_dlog_T,
+    double iter_params_d_hlog_T,
     double iter_params_d_log_rT,
     double iter_params_d_c2T,
     double iter_params_d_rQ,
@@ -416,8 +417,8 @@ __global__ void applyLineshapes(complex<float>* DLM,
 				// out_im += mul * DLM[index].y;
 			}
 		}
-		spectrum[iv].x = out_complex.x;    
-		spectrum[iv].y = out_complex.y;
+        complex<float> temp(out_complex.real(), out_complex.imag());
+		spectrum[iv] = temp;
 	}
 }
 }'''
@@ -499,7 +500,7 @@ cdef void init_lorentzian_params(): #vector[float] log_2gs, vector[float] na):
     cdef vector[float] bottom_b 
     cdef vector[float] bottom_x
 
-    print("Initializing Lorentzian parameters")
+    print("Initializing Lorentzian parameters ", end = "")
 
     cdef int top_size = 0
     cdef int bottom_size = 0
@@ -508,7 +509,7 @@ cdef void init_lorentzian_params(): #vector[float] log_2gs, vector[float] na):
 
     try:
         with open(fname, 'rb') as f:
-            print(" (from cache)... ")
+            print(" (from cache)... ", end="\n")
             lt = pickle.load(f)
 
             top_size = lt[0]
@@ -531,7 +532,7 @@ cdef void init_lorentzian_params(): #vector[float] log_2gs, vector[float] na):
             host_params_h_bottom_x = lt[7]
 
     except:
-        print(" ... ")
+        print(" ... ", end="\n")
 
         for i in range(len(na)):
             unique_set.insert({na[i], log_2gs[i]})
@@ -688,17 +689,17 @@ cdef void init_gaussian_params(): #vector[float] log_2vMm):
 
     cdef float log_2vMm_min
     cdef float log_2vMm_max
-    print("Initializing Gaussian parameters")
+    print("Initializing Gaussian parameters", end="")
 
     fname = "Gaussian_minmax_" + str(len(log_2vMm)) + ".dat"
     try:
         with open(fname, 'rb') as f:
-            print(" (from cache)... ")
+            print(" (from cache)... ", end="\n")
             lt = pickle.load(f)
             log_2vMm_min = lt[0]
             log_2vMm_max = lt[1]
     except:
-        print("... ")
+        print("... ", end="\n")
         log_2vMm_min = np.minimum(log_2vMm)
         log_2vMm_max = np.maximum(log_2vMm)
         lt = [log_2vMm_min, log_2vMm_max]
@@ -740,12 +741,12 @@ cdef int prepare_blocks():
     global host_params_h_v0_dec
     global host_params_h_da_dec
     global host_params_h_dec_size
+    global host_params_h_block_preparation_step_size
 
     global iter_params_h_p
     global iter_params_h_blocks_iv_offset
     global iter_params_h_blocks_line_offset
 
-    global init_params_h_block_preparation_step_size
     global init_params_h_N_points_per_block
     global init_params_h_N_threads_per_block
     global init_params_h_dv
@@ -754,8 +755,8 @@ cdef int prepare_blocks():
     global init_params_h_dv
     #------------------------------------------------------
 
-    cdef float* v0 = host_params_h_v0_dec
-    cdef float* da = host_params_h_da_dec
+    cdef vector[float] v0 = host_params_h_v0_dec
+    cdef vector[float] da = host_params_h_da_dec
 
     cdef float v_prev
     cdef float dvdi
@@ -765,7 +766,7 @@ cdef int prepare_blocks():
 
     # in lieu of blockData struct, create new arrays
     cdef int new_block_line_offset
-    cdef int iv_offset
+    cdef int new_block_iv_offset
 
     cdef float v_cur = v0[0] + iter_params_h_p * da[0]
     cdef float v_max = v_cur + init_params_h_N_points_per_block * init_params_h_dv
@@ -774,23 +775,34 @@ cdef int prepare_blocks():
     new_block_line_offset = 0
     new_block_iv_offset = int(((v_cur - init_params_h_v_min) / init_params_h_dv))
 
+    print("entering while loop...")
 
-    while 1:
+    while True:
+        print("og i = {0}".format(i), end=" ")
         i += step
+        print("updated i = {0} | n = {1}".format(i, n), end="\n")
         if i > host_params_h_dec_size:
+            print("i is greater than host_params_h_dec_size ( = {0} )...".format(host_params_h_dec_size))
             iter_params_h_blocks_line_offset[n] = new_block_line_offset
             iter_params_h_blocks_iv_offset[n] = new_block_iv_offset
+
             n+=1
+            print("updated n to {0}".format(n), end="\n")
             new_block_line_offset = i * init_params_h_N_threads_per_block
+
             iter_params_h_blocks_line_offset[n] = new_block_line_offset
             iter_params_h_blocks_iv_offset[n] = new_block_iv_offset
+
             break
         
+        print("not going inside first if...", end="\n")
         v_prev = v_cur
         v_cur = v0[i] + iter_params_h_p * da[i]
         
         if ((v_cur > v_max) or (i >= i_max)) : 
+            print("inside second if...\n")
             if (v_cur > v_max) : 
+                print("inside third if...\n")
                 dvdi = (v_cur - v_prev) / float(step)
                 i -= int(((v_cur - v_max) / dvdi)) + 1
                 v_cur = v0[i] + iter_params_h_p * da[i]
@@ -887,17 +899,22 @@ cdef void iterate(float p, float T):
     global iter_params_d_blocks_iv_offset
     #------------------------------------------------------
 
+    print("checkpoint -1...")
     host_params_h_start.record()
     
+    print("checkpoint 0...")
     cdef int n_blocks
     set_pT(p, T)
+    print("checkpoint 0.1...")
     calc_gaussian_params()
+    print("checkpoint 0.2...")
     calc_lorentzian_params()
+    print("checkpoint 0.3...")
     n_blocks = prepare_blocks()
 
-	# Copy iter_params to device
-	#gpuHandleError(cudaMemcpyToSymbol(iter_params_d, iter_params_h, sizeof(iterData)))
+    print("checkpoint 1...")
 
+	# Copy iter_params to device #gpuHandleError(cudaMemcpyToSymbol(iter_params_d, iter_params_h, sizeof(iterData)))
     iter_params_d_p =                   cp.float32(iter_params_h_p)
     iter_params_d_log_p =               cp.float32(iter_params_h_log_p)
     iter_params_d_hlog_T =              cp.float32(iter_params_h_hlog_T)
@@ -911,12 +928,16 @@ cdef void iterate(float p, float T):
     iter_params_d_blocks_line_offset =  cp.array(iter_params_h_blocks_line_offset)
     iter_params_d_blocks_iv_offset =    cp.array(iter_params_h_blocks_iv_offset)
 
+
+    print("checkpoint 2...")
 	# Zero DLM:
-    host_params_h_DLM_d.fill(0)  #gpuHandleError(cudaMemset(host_params_h_DLM_d, 0, 2 * (init_params_h_N_v + 1) * init_params_h_N_wG_x_N_wL * sizeof(float)))
+    host_params_h_DLM_d_in.fill(0)  #gpuHandleError(cudaMemset(host_params_h_DLM_d, 0, 2 * (init_params_h_N_v + 1) * init_params_h_N_wG_x_N_wL * sizeof(float)))
 
     print("Getting ready...")
 	# Launch Kernel:
     host_params_h_start_DLM.record()
+
+    print("checkpoint 3...")
 
 	# from population calculation to calculating the line set
     fillDLM ((n_blocks,), (init_params_h_N_threads_per_block,), #host_params_h_shared_size 
@@ -928,7 +949,7 @@ cdef void iterate(float p, float T):
 		host_params_h_log_2gs_d,
 		host_params_h_na_d,
 		host_params_h_log_2vMm_d,
-		host_params_h_DLM_d,
+		host_params_h_DLM_d_in,
 
         iter_params_d_p,
         iter_params_d_log_p,
@@ -962,17 +983,22 @@ cdef void iterate(float p, float T):
        
         ))
 
+    print("checkpoint 4...")
+
     host_params_h_stop_DLM.record()
     cp.cuda.runtime.eventSynchronize(host_params_h_stop_DLM_ptr)
     host_params_h_elapsedTimeDLM = cp.cuda.get_elapsed_time(host_params_h_start_DLM, host_params_h_stop_DLM)
     print("<<<LAUNCHED>>> ")
 
     cp.cuda.runtime.deviceSynchronize()
+    print('checkpoint 5...')
 
 	# FFT
     # figure out how host_params_h_DLM_d_in points to the same memory location as host_params_h_DLM_d
     host_params_h_DLM_d_out = cp.fft.rfftn(host_params_h_DLM_d_in) #cufftExecR2C(host_params_h_plan_DLM, host_params_h_DLM_d_in, host_params_h_DLM_d_out)
     cp.cuda.runtime.deviceSynchronize()
+
+    print("checkpoint 6...")
 
     cdef int n_threads = 1024
     n_blocks = (init_params_h_N_v + 1) / n_threads + 1
@@ -1013,20 +1039,29 @@ cdef void iterate(float p, float T):
         init_params_d_shared_size_floats
     )
     )
+
+    print("checkpoint 7...")
     cp.cuda.runtime.deviceSynchronize()
 
+    print("checkpoint 8...")
 	# inverse FFT
     host_params_h_spectrum_d_out = cp.fft.irfft(host_params_h_spectrum_d_in) #	#cufftExecC2R(host_params_h_plan_spectrum, host_params_h_spectrum_d_in, host_params_h_spectrum_d_out)
     cp.cuda.runtime.deviceSynchronize()
 
-    spectrum_h = host_params_h_spectrum_d.get()  ##gpuHandleError(cudaMemcpy(spectrum_h, host_params_h_spectrum_d, init_params_h_N_v * sizeof(float), cudaMemcpyDeviceToHost))
+    print("checkpoint 9...")
+    spectrum_h = host_params_h_spectrum_d_out.get()  ##gpuHandleError(cudaMemcpy(spectrum_h, host_params_h_spectrum_d, init_params_h_N_v * sizeof(float), cudaMemcpyDeviceToHost))
 	# end of voigt broadening
 	# spectrum_h is the k nu
 	
+    print("checkpoint 10...")
     host_params_h_stop.record()
     cp.cuda.runtime.eventSynchronize(host_params_h_stop_ptr)
+    print("checkpoint 11...")
     host_params_h_elapsedTime = cp.cuda.get_elapsed_time(host_params_h_start, host_params_h_stop)
 
+
+
+    print("obtained spectrum_h...")
 	#cout << "(" << elapsedTime << " ms)" << endl;
     print("[rG = {0}%".format(np.exp(iter_params_h_log_dwG) - 1) * 100, end = " ")
     print("rL = {0}%]".format(np.exp(iter_params_h_log_dwL) - 1) * 100 )
@@ -1093,8 +1128,22 @@ def start():
     global spec_h_log_2vMm
     global spec_h_na
     global spec_h_log_2gs
+
+    global host_params_h_v0_dec
+    global host_params_h_da_dec
+    global host_params_h_dec_size
+    global host_params_h_block_preparation_step_size
+    global host_params_h_v0_d
+    global host_params_h_da_d
+    global host_params_h_S0_d
+    global host_params_h_El_d
+    global host_params_h_log_2gs_d
+    global host_params_h_na_d
+    global host_params_h_log_2vMm_d
+    global host_params_h_DLM_d_in
+    global host_params_h_spectrum_d_in
     #-----------------------------------------------------
-    dir_path = '/home/pankaj/radis-lab/'
+    dir_path = '/home/pankaj/radis-lab/data-vsmall/'
 
     init_params_h_v_min = 1750.0
     init_params_h_v_max = 2400.0
@@ -1107,7 +1156,7 @@ def start():
     v_arr = [init_params_h_v_min + i * init_params_h_dv for i in range(init_params_h_N_v)]
 
     init_params_h_Max_iterations_per_thread = 1024
-    init_params_h_block_preparation_step_size = 128
+    host_params_h_block_preparation_step_size = 128
 
     host_params_h_shared_size = 0x8000          # Bytes - Size of the shared memory
     host_params_h_Min_threads_per_block = 128   # Ensures a full warp from each of the 4 processors
@@ -1117,6 +1166,7 @@ def start():
     init_params_h_N_wG_x_N_wL = init_params_h_N_wG * init_params_h_N_wL
     init_params_h_N_total = init_params_h_N_wG_x_N_wL * init_params_h_N_v
     init_params_h_N_points_per_block = init_params_h_shared_size_floats / init_params_h_N_wG_x_N_wL
+    
     init_params_h_N_threads_per_block = 1024
     init_params_h_N_blocks_per_grid = 4 * 256 * 256
     init_params_h_N_points_per_thread = init_params_h_N_points_per_block / init_params_h_N_threads_per_block
@@ -1130,46 +1180,84 @@ def start():
     # init v:
     print("Init v : ")
     init_params_h_Max_lines = int(2.4E8)
-    read_npy(dir_path+'v0.npy', v0)
+
+    #read_npy(dir_path+'v0.npy', v0)
+    
+    print("Loading v0.npy...")
+    v0 = np.load(dir_path+'v0.npy')
+    print("Done!")
     spec_h_v0 = v0
-    read_npy(dir_path+'da.npy', da)
+    
+    #read_npy(dir_path+'da.npy', da)
+
+    print("Loading da.npy...")
+    da = np.load(dir_path+'da.npy')
+    print("Done!")
     spec_h_da = da
 
-    v0_dec = np.minimum.reduceat(v0, np.arange(0, len(v0), init_params_h_N_threads_per_block))     #decimate (v0, v0_dec, init_params_h_N_threads_per_block)
-    host_params_h_v0_dec = v0_dec
-    host_params_h_dec_size = len(v0_dec)
+    host_params_h_v0_dec = np.minimum.reduceat(v0, np.arange(0, len(v0), init_params_h_N_threads_per_block))     #decimate (v0, v0_dec, init_params_h_N_threads_per_block)
+    host_params_h_dec_size = host_params_h_v0_dec.size()
 
-    da_dec = np.minimum.reduceat(da, np.arange(0, len(da), init_params_h_N_threads_per_block)) #decimate (da, da_dec, init_params_h_N_threads_per_block)
-    host_params_h_da_dec = da_dec
+    host_params_h_da_dec = np.minimum.reduceat(da, np.arange(0, len(da), init_params_h_N_threads_per_block)) #decimate (da, da_dec, init_params_h_N_threads_per_block)
     print()
 
     # wL inits
     print("Init wL: ")
-    read_npy(dir_path + 'log_2gs.npy', log_2gs)
+    #read_npy(dir_path + 'log_2gs.npy', log_2gs)
+    print("Loading log_2gs.npy...")
+    log_2gs = np.load(dir_path+'log_2gs.npy')
+    print("Done!")
     spec_h_log_2gs = log_2gs
-    read_npy(dir_path + 'na.npy', na)
+    #read_npy(dir_path + 'na.npy', na)
+    print("Loading na.npy...")
+    na = np.load(dir_path+'na.npy')
+    print("Done!")
     spec_h_na = na
     init_lorentzian_params()
     print()
 
     # wG inits:
     print("Init wG: ")
-    read_npy(dir_path + 'log_2vMm.npy', log_2vMm)
+    #read_npy(dir_path + 'log_2vMm.npy', log_2vMm)
+    print("Loading log_2vMm.npy...")
+    log_2vMm = np.load(dir_path+'log_2vMm.npy')
+    print("Done!")
     spec_h_log_2vMm = log_2vMm
     init_gaussian_params()
     print()
 
     # I inits:
     print("Init I: ")
-    read_npy(dir_path + 'S0.npy', S0)
+    #read_npy(dir_path + 'S0.npy', S0)
+    print("Loading S0.npy...")
+    S0 = np.load(dir_path+'S0.npy')
+    print("Done!")
     spec_h_S0 = S0
-    read_npy(dir_path + 'El.npy', El)
+    #read_npy(dir_path + 'El.npy', El)
+    print("Loading El.npy...")
+    El = np.load(dir_path+'El.npy')
+    print("Done!")
     spec_h_El = El
     print()
 
     init_params_h_N_lines = int(len(v0))
     print("Number of lines loaded: {0}".format(init_params_h_N_lines))
     print()
+
+
+    # print("---> starting iterate method early <-----")
+    # print("checkpoint 0...")
+    # cdef int n_blocks
+    # set_pT(0.1,2000)
+    # print("checkpoint 0.1...")
+    # calc_gaussian_params()
+    # print("checkpoint 0.2...")
+    # calc_lorentzian_params()
+    # print("checkpoint 0.3...")
+    # n_blocks = prepare_blocks()
+    # print("successfully ran iterate prep methods... back to allocating memory")
+
+
 
     print("Allocating device memory...")
 
@@ -1204,11 +1292,11 @@ def start():
 	# DLM is allocated once, but must be zero'd every iteration ---> not needed anymore
 
     # when using CuPy, these lines are redundant...
-    host_params_h_DLM_d = cp.zeros(2 * (init_params_h_N_v + 1) * init_params_h_N_wG_x_N_wL, dtype=cp.float32)
+    host_params_h_DLM_d_in = cp.zeros(2 * (init_params_h_N_v + 1) * init_params_h_N_wG_x_N_wL, dtype=cp.float32)
 	#host_params_h.DLM_d_in = (cufftReal*)host_params_h.DLM_d;                   <-- how are these going to work?
 	#host_params_h.DLM_d_out = (cufftComplex*)host_params_h.DLM_d;
 
-    host_params_h_spectrum_d = cp.zeros(2*(init_params_h_N_v + 1), dtype=cp.float32)
+    host_params_h_spectrum_d_in = cp.zeros(2*(init_params_h_N_v + 1), dtype=cp.complex64)
 	#host_params_h.spectrum_d_in = (cufftComplex*)host_params_h.spectrum_d;
 	#host_params_h.spectrum_d_out = (cufftReal*)host_params_h.spectrum_d;
     print("Done!")
@@ -1272,9 +1360,9 @@ def start():
     p = 0.1
     T = 2000.0
 
-    T_min = 500.0
-    T_max = 5000.0
-    dT = 500.0
+    T_min = 500
+    T_max = 5000
+    dT = 500
 
     for T in range(T_min, T_max, dT):
         iterate(p, T)
