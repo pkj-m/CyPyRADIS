@@ -1,0 +1,137 @@
+checkpoint 1...
+Traceback (most recent call last):
+  File "/home/pankaj/anaconda3/lib/python3.7/site-packages/cupy/creation/from_data.py", line 43, in array
+    return core.array(obj, dtype, copy, order, subok, ndmin)
+  File "cupy/core/core.pyx", line 1785, in cupy.core.core.array
+  File "cupy/core/core.pyx", line 1862, in cupy.core.core.array
+  File "cupy/core/core.pyx", line 1945, in cupy.core.core._send_object_to_gpu
+  File "cupy/core/core.pyx", line 2022, in cupy.core.core._alloc_async_transfer_buffer
+  File "cupy/core/core.pyx", line 2019, in cupy.core.core._alloc_async_transfer_buffer
+  File "cupy/cuda/pinned_memory.pyx", line 215, in cupy.cuda.pinned_memory.alloc_pinned_memory
+  File "cupy/cuda/pinned_memory.pyx", line 289, in cupy.cuda.pinned_memory.PinnedMemoryPool.malloc
+  File "cupy/cuda/pinned_memory.pyx", line 309, in cupy.cuda.pinned_memory.PinnedMemoryPool.malloc
+  File "cupy/cuda/pinned_memory.pyx", line 306, in cupy.cuda.pinned_memory.PinnedMemoryPool.malloc
+  File "cupy/cuda/pinned_memory.pyx", line 180, in cupy.cuda.pinned_memory._malloc
+  File "cupy/cuda/pinned_memory.pyx", line 181, in cupy.cuda.pinned_memory._malloc
+  File "cupy/cuda/pinned_memory.pyx", line 30, in cupy.cuda.pinned_memory.PinnedMemory.__init__
+  File "cupy/cuda/runtime.pyx", line 334, in cupy.cuda.runtime.hostAlloc
+  File "cupy/cuda/runtime.pyx", line 201, in cupy.cuda.runtime.check_status
+cupy.cuda.runtime.CUDARuntimeError: cudaErrorIllegalAddress: an illegal memory access was encountered
+Exception ignored in: 'py_cuffs.iterate'
+Traceback (most recent call last):
+  File "/home/pankaj/anaconda3/lib/python3.7/site-packages/cupy/creation/from_data.py", line 43, in array
+    return core.array(obj, dtype, copy, order, subok, ndmin)
+  File "cupy/core/core.pyx", line 1785, in cupy.core.core.array
+  File "cupy/core/core.pyx", line 1862, in cupy.core.core.array
+  File "cupy/core/core.pyx", line 1945, in cupy.core.core._send_object_to_gpu
+  File "cupy/core/core.pyx", line 2022, in cupy.core.core._alloc_async_transfer_buffer
+  File "cupy/core/core.pyx", line 2019, in cupy.core.core._alloc_async_transfer_buffer
+  File "cupy/cuda/pinned_memory.pyx", line 215, in cupy.cuda.pinned_memory.alloc_pinned_memory
+  File "cupy/cuda/pinned_memory.pyx", line 289, in cupy.cuda.pinned_memory.PinnedMemoryPool.malloc
+  File "cupy/cuda/pinned_memory.pyx", line 309, in cupy.cuda.pinned_memory.PinnedMemoryPool.malloc
+  File "cupy/cuda/pinned_memory.pyx", line 306, in cupy.cuda.pinned_memory.PinnedMemoryPool.malloc
+  File "cupy/cuda/pinned_memory.pyx", line 180, in cupy.cuda.pinned_memory._malloc
+  File "cupy/cuda/pinned_memory.pyx", line 181, in cupy.cuda.pinned_memory._malloc
+  File "cupy/cuda/pinned_memory.pyx", line 30, in cupy.cuda.pinned_memory.PinnedMemory.__init__
+  File "cupy/cuda/runtime.pyx", line 334, in cupy.cuda.runtime.hostAlloc
+  File "cupy/cuda/runtime.pyx", line 201, in cupy.cuda.runtime.check_status
+cupy.cuda.runtime.CUDARuntimeError: cudaErrorIllegalAddress: an illegal memory access was encountered
+checkpoint -1...
+Traceback (most recent call last):
+  File "cupy/cuda/stream.pyx", line 126, in cupy.cuda.stream.Event.record
+  File "cupy/cuda/runtime.pyx", line 599, in cupy.cuda.runtime.eventRecord
+  File "cupy/cuda/runtime.pyx", line 601, in cupy.cuda.runtime.eventRecord
+  File "cupy/cuda/runtime.pyx", line 201, in cupy.cuda.runtime.check_status
+cupy.cuda.runtime.CUDARuntimeError: cudaErrorIllegalAddress: an illegal memory access was encountered
+Exception ignored in: 'py_cuffs.iterate'
+Traceback (most recent call last):
+  File "cupy/cuda/stream.pyx", line 126, in cupy.cuda.stream.Event.record
+  File "cupy/cuda/runtime.pyx", line 599, in cupy.cuda.runtime.eventRecord
+  File "cupy/cuda/runtime.pyx", line 601, in cupy.cuda.runtime.eventRecord
+  File "cupy/cuda/runtime.pyx", line 201, in cupy.cuda.runtime.check_status
+cupy.cuda.runtime.CUDARuntimeError: cudaErrorIllegalAddress: an illegal memory access was encountered
+checkpoint -1...
+Traceback (most recent call last):
+  File "cupy/cuda/stream.pyx", line 126, in cupy.cuda.stream.Event.record
+  File "cupy/cuda/runtime.pyx", line 599, in cupy.cuda.runtime.eventRecord
+  File "cupy/cuda/runtime.pyx", line 601, in cupy.cuda.runtime.eventRecord
+  File "cupy/cuda/runtime.pyx", line 201, in cupy.cuda.runtime.check_status
+cupy.cuda.runtime.CUDARuntimeError: cudaErrorIllegalAddress: an illegal memory access was encountered
+Exception ignored in: 'py_cuffs.iterate'
+Traceback (most recent call last):
+  File "cupy/cuda/stream.pyx", line 126, in cupy.cuda.stream.Event.record
+  File "cupy/cuda/runtime.pyx", line 599, in cupy.cuda.runtime.eventRecord
+  File "cupy/cuda/runtime.pyx", line 601, in cupy.cuda.runtime.eventRecord
+  File "cupy/cuda/runtime.pyx", line 201, in cupy.cuda.runtime.check_status
+cupy.cuda.runtime.CUDARuntimeError: cudaErrorIllegalAddress: an illegal memory access was encountered
+checkpoint -1...
+Traceback (most recent call last):
+  File "cupy/cuda/stream.pyx", line 126, in cupy.cuda.stream.Event.record
+  File "cupy/cuda/runtime.pyx", line 599, in cupy.cuda.runtime.eventRecord
+  File "cupy/cuda/runtime.pyx", line 601, in cupy.cuda.runtime.eventRecord
+  File "cupy/cuda/runtime.pyx", line 201, in cupy.cuda.runtime.check_status
+cupy.cuda.runtime.CUDARuntimeError: cudaErrorIllegalAddress: an illegal memory access was encountered
+Exception ignored in: 'py_cuffs.iterate'
+Traceback (most recent call last):
+  File "cupy/cuda/stream.pyx", line 126, in cupy.cuda.stream.Event.record
+  File "cupy/cuda/runtime.pyx", line 599, in cupy.cuda.runtime.eventRecord
+  File "cupy/cuda/runtime.pyx", line 601, in cupy.cuda.runtime.eventRecord
+  File "cupy/cuda/runtime.pyx", line 201, in cupy.cuda.runtime.check_status
+cupy.cuda.runtime.CUDARuntimeError: cudaErrorIllegalAddress: an illegal memory access was encountered
+checkpoint -1...
+Traceback (most recent call last):
+  File "cupy/cuda/stream.pyx", line 126, in cupy.cuda.stream.Event.record
+  File "cupy/cuda/runtime.pyx", line 599, in cupy.cuda.runtime.eventRecord
+  File "cupy/cuda/runtime.pyx", line 601, in cupy.cuda.runtime.eventRecord
+  File "cupy/cuda/runtime.pyx", line 201, in cupy.cuda.runtime.check_status
+cupy.cuda.runtime.CUDARuntimeError: cudaErrorIllegalAddress: an illegal memory access was encountered
+Exception ignored in: 'py_cuffs.iterate'
+Traceback (most recent call last):
+  File "cupy/cuda/stream.pyx", line 126, in cupy.cuda.stream.Event.record
+  File "cupy/cuda/runtime.pyx", line 599, in cupy.cuda.runtime.eventRecord
+  File "cupy/cuda/runtime.pyx", line 601, in cupy.cuda.runtime.eventRecord
+  File "cupy/cuda/runtime.pyx", line 201, in cupy.cuda.runtime.check_status
+cupy.cuda.runtime.CUDARuntimeError: cudaErrorIllegalAddress: an illegal memory access was encountered
+checkpoint -1...
+Traceback (most recent call last):
+  File "cupy/cuda/stream.pyx", line 126, in cupy.cuda.stream.Event.record
+  File "cupy/cuda/runtime.pyx", line 599, in cupy.cuda.runtime.eventRecord
+  File "cupy/cuda/runtime.pyx", line 601, in cupy.cuda.runtime.eventRecord
+  File "cupy/cuda/runtime.pyx", line 201, in cupy.cuda.runtime.check_status
+cupy.cuda.runtime.CUDARuntimeError: cudaErrorIllegalAddress: an illegal memory access was encountered
+Exception ignored in: 'py_cuffs.iterate'
+Traceback (most recent call last):
+  File "cupy/cuda/stream.pyx", line 126, in cupy.cuda.stream.Event.record
+  File "cupy/cuda/runtime.pyx", line 599, in cupy.cuda.runtime.eventRecord
+  File "cupy/cuda/runtime.pyx", line 601, in cupy.cuda.runtime.eventRecord
+  File "cupy/cuda/runtime.pyx", line 201, in cupy.cuda.runtime.check_status
+cupy.cuda.runtime.CUDARuntimeError: cudaErrorIllegalAddress: an illegal memory access was encountered
+checkpoint -1...
+Traceback (most recent call last):
+  File "cupy/cuda/stream.pyx", line 126, in cupy.cuda.stream.Event.record
+  File "cupy/cuda/runtime.pyx", line 599, in cupy.cuda.runtime.eventRecord
+  File "cupy/cuda/runtime.pyx", line 601, in cupy.cuda.runtime.eventRecord
+  File "cupy/cuda/runtime.pyx", line 201, in cupy.cuda.runtime.check_status
+cupy.cuda.runtime.CUDARuntimeError: cudaErrorIllegalAddress: an illegal memory access was encountered
+Exception ignored in: 'py_cuffs.iterate'
+Traceback (most recent call last):
+  File "cupy/cuda/stream.pyx", line 126, in cupy.cuda.stream.Event.record
+  File "cupy/cuda/runtime.pyx", line 599, in cupy.cuda.runtime.eventRecord
+  File "cupy/cuda/runtime.pyx", line 601, in cupy.cuda.runtime.eventRecord
+  File "cupy/cuda/runtime.pyx", line 201, in cupy.cuda.runtime.check_status
+cupy.cuda.runtime.CUDARuntimeError: cudaErrorIllegalAddress: an illegal memory access was encountered
+checkpoint -1...
+Traceback (most recent call last):
+  File "cupy/cuda/stream.pyx", line 126, in cupy.cuda.stream.Event.record
+  File "cupy/cuda/runtime.pyx", line 599, in cupy.cuda.runtime.eventRecord
+  File "cupy/cuda/runtime.pyx", line 601, in cupy.cuda.runtime.eventRecord
+  File "cupy/cuda/runtime.pyx", line 201, in cupy.cuda.runtime.check_status
+cupy.cuda.runtime.CUDARuntimeError: cudaErrorIllegalAddress: an illegal memory access was encountered
+Exception ignored in: 'py_cuffs.iterate'
+Traceback (most recent call last):
+  File "cupy/cuda/stream.pyx", line 126, in cupy.cuda.stream.Event.record
+  File "cupy/cuda/runtime.pyx", line 599, in cupy.cuda.runtime.eventRecord
+  File "cupy/cuda/runtime.pyx", line 601, in cupy.cuda.runtime.eventRecord
+  File "cupy/cuda/runtime.pyx", line 201, in cupy.cuda.runtime.check_status
+cupy.cuda.runtime.CUDARuntimeError: cudaErrorIllegalAddress: an illegal memory access was encountered
+
