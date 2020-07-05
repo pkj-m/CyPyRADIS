@@ -775,19 +775,19 @@ cdef int prepare_blocks():
     new_block_line_offset = 0
     new_block_iv_offset = int(((v_cur - init_params_h_v_min) / init_params_h_dv))
 
-    print("entering while loop...")
+    #print("entering while loop...")
 
     while True:
-        print("og i = {0}".format(i), end=" ")
+        #print("og i = {0}".format(i), end=" ")
         i += step
-        print("updated i = {0} | n = {1}".format(i, n), end="\n")
+        #print("updated i = {0} | n = {1}".format(i, n), end="\n")
         if i > host_params_h_dec_size:
-            print("i is greater than host_params_h_dec_size ( = {0} )...".format(host_params_h_dec_size))
+            #print("i is greater than host_params_h_dec_size ( = {0} )...".format(host_params_h_dec_size))
             iter_params_h_blocks_line_offset[n] = new_block_line_offset
             iter_params_h_blocks_iv_offset[n] = new_block_iv_offset
 
             n+=1
-            print("updated n to {0}".format(n), end="\n")
+            #print("updated n to {0}".format(n), end="\n")
             new_block_line_offset = i * init_params_h_N_threads_per_block
 
             iter_params_h_blocks_line_offset[n] = new_block_line_offset
@@ -795,14 +795,14 @@ cdef int prepare_blocks():
 
             break
         
-        print("not going inside first if...", end="\n")
+        #print("not going inside first if...", end="\n")
         v_prev = v_cur
         v_cur = v0[i] + iter_params_h_p * da[i]
         
         if ((v_cur > v_max) or (i >= i_max)) : 
-            print("inside second if...\n")
+            #print("inside second if...\n")
             if (v_cur > v_max) : 
-                print("inside third if...\n")
+                #print("inside third if...\n")
                 dvdi = (v_cur - v_prev) / float(step)
                 i -= int(((v_cur - v_max) / dvdi)) + 1
                 v_cur = v0[i] + iter_params_h_p * da[i]
@@ -916,16 +916,27 @@ cdef void iterate(float p, float T):
 
 	# Copy iter_params to device #gpuHandleError(cudaMemcpyToSymbol(iter_params_d, iter_params_h, sizeof(iterData)))
     iter_params_d_p =                   cp.float32(iter_params_h_p)
+    print("checkpoint 1.1...")
     iter_params_d_log_p =               cp.float32(iter_params_h_log_p)
+    print("checkpoint 1.2...")
     iter_params_d_hlog_T =              cp.float32(iter_params_h_hlog_T)
+    print("checkpoint 1.3...")
     iter_params_d_log_rT =              cp.float32(iter_params_h_log_rT)
+    print("checkpoint 1.4...")
     iter_params_d_c2T =                 cp.float32(iter_params_h_c2T)
+    print("checkpoint 1.5...")
     iter_params_d_rQ =                  cp.float32(iter_params_h_rQ)
+    print("checkpoint 1.6...")
     iter_params_d_log_wG_min =          cp.float32(iter_params_h_log_wG_min)
+    print("checkpoint 1.7...")
     iter_params_d_log_wL_min =          cp.float32(iter_params_h_log_wL_min)
+    print("checkpoint 1.8...")
     iter_params_d_log_dwG =             cp.float32(iter_params_h_log_dwG)
+    print("checkpoint 1.9...")
     iter_params_d_log_dwL =             cp.float32(iter_params_h_log_dwL)
+    print("checkpoint 1.10...")
     iter_params_d_blocks_line_offset =  cp.array(iter_params_h_blocks_line_offset)
+    print("checkpoint 1.11...")
     iter_params_d_blocks_iv_offset =    cp.array(iter_params_h_blocks_iv_offset)
 
 
@@ -1143,10 +1154,12 @@ def start():
     global host_params_h_DLM_d_in
     global host_params_h_spectrum_d_in
     #-----------------------------------------------------
-    dir_path = '/home/pankaj/radis-lab/data-vsmall/'
+
+    # NOTE: Please make sure you change the limits on line 1161-2 and specify the waverange corresponding to the dataset being used
+    dir_path = '/home/pankaj/radis-lab/data-1750-1850/'
 
     init_params_h_v_min = 1750.0
-    init_params_h_v_max = 2400.0
+    init_params_h_v_max = 1850.0
     init_params_h_dv = 0.002
     init_params_h_N_v = int((init_params_h_v_max - init_params_h_v_max)/init_params_h_dv)
 
@@ -1263,7 +1276,7 @@ def start():
 
     # start the CUDA work
 
-    cp.cuda.runtime.setDevice(0) #gpuHandleError(cudaSetDevice(0));
+    #gpuHandleError(cudaSetDevice(0));
 
     #gpuHandleError(cudaFuncSetAttribute(fillDLM, cudaFuncAttributeMaxDynamicSharedMemorySize, host_params_h.shared_size));   <------- how to do this is CuPy?
 
@@ -1364,9 +1377,11 @@ def start():
     T_max = 5000
     dT = 500
 
-    for T in range(T_min, T_max, dT):
-        iterate(p, T)
-    return
+
+    iterate(p, 1000)
+    # for T in range(T_min, T_max, dT):
+    #     iterate(p, T)
+    # return
 
     #Cleanup and go home:
 	#cudaEventDestroy(host_params_h_start);
