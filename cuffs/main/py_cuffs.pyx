@@ -1161,18 +1161,6 @@ def start():
     # NOTE: Please make sure you change the limits on line 1161-2 and specify the waverange corresponding to the dataset being used
     dir_path = '/home/pankaj/radis-lab/data-1750-1850/'
 
-    print("Loading log_2vMm.npy...")
-    log_2vMm = np.load(dir_path+'log_2vMm.npy')
-    print("Done!")
-    #spec_h_log_2vMm = log_2vMm
-    init_gaussian_params()
-    print()
-
-    exit()
-
-
-
-
     init_params_h_v_min = 1750.0
     init_params_h_v_max = 1850.0
     init_params_h_dv = 0.002
@@ -1189,7 +1177,7 @@ def start():
     host_params_h_shared_size = 0x8000          # Bytes - Size of the shared memory
     host_params_h_Min_threads_per_block = 128   # Ensures a full warp from each of the 4 processors
     host_params_h_Max_threads_per_block = 1024  # Maximum determined by device parameters
-    init_params_h_shared_size_floats = host_params_h_shared_size / sys.getsizeof(float())
+    init_params_h_shared_size_floats = host_params_h_shared_size // sys.getsizeof(float())
 
     init_params_h_N_wG_x_N_wL = init_params_h_N_wG * init_params_h_N_wL
     init_params_h_N_total = init_params_h_N_wG_x_N_wL * init_params_h_N_v
@@ -1253,8 +1241,6 @@ def start():
     spec_h_log_2vMm = log_2vMm
     init_gaussian_params()
     print()
-
-    exit()
 
     # I inits:
     print("Init I: ")

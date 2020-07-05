@@ -133,29 +133,54 @@ cdef vector[float] host_params_h_v0_dec
     
 #     return n
 
+cdef int arrayofints[10]
 
 def start():
     a = 10
     b = 20
 
     # check if we can return a value and store it in a cdef var: CONFIRMED
-    cdef float x
-    x = add(a, b)
-    print('result = {0}'.format(x))
+    
+    # cdef float x
+    # x = add(a, b)
+    # print('result = {0}'.format(x))
+
+
+    # check the errror when a None variable is passed to the GPU
+    c = None
+    c_d = cp.float32(c)
+    print("c_d = {0}".format(c_d))
 
     # check if a pointer to float can be set to a numpy array: DOES NOT WORK
     # if we try to set a vector equal to a nupy array, it works
-    sz = 20
-    test_array = np.arange(sz, dtype=np.float32)
-    global host_params_h_v0_dec
-    host_params_h_v0_dec = test_array
-    print("original array: ", end="")
-    print(test_array, end="\n")
-    print("pointer to array: ", end="")
-    for i in range(sz):
-        print(host_params_h_v0_dec[i], end=" ")
-    print(end="\n")
-    print("size of vector = {0}".format(host_params_h_v0_dec.size()), end="\n")
+    
+    # sz = 20
+    # test_array = np.arange(sz, dtype=np.float32)
+    # global host_params_h_v0_dec
+    # host_params_h_v0_dec = test_array
+    # print("original array: ", end="")
+    # print(test_array, end="\n")
+    # print("pointer to array: ", end="")
+    # for i in range(sz):
+    #     print(host_params_h_v0_dec[i], end=" ")
+    # print(end="\n")
+    # print("size of vector = {0}".format(host_params_h_v0_dec.size()), end="\n")
+
+    # check if an ARRAY of integers can be passed to the cupy device memory: WORKS
+    # global arrayofints
+    # for i in range(10):
+    #     arrayofints[i] = i
+    
+    # print("allocated array as: ", end="")
+    # for i in range(10):
+    #     print(i, end=" ")
+    # print("\nmoving array to gpu...", end="\n")
+    # arrayongpu = cp.array(arrayofints)
+    # print("move successful...")
+    # print("array on gpu: ", end="")
+    # for i in range(10):
+    #     print(arrayongpu[i], end= " ")
+    # print("\nfinished...")
 
 
 
