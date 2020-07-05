@@ -679,7 +679,7 @@ cdef void calc_lorentzian_params():
     return 
 
 
-cdef void init_gaussian_params(): #vector[float] log_2vMm):
+cdef void init_gaussian_params(): 
 
     # ----------- setup global variables -----------------
     global log_2vMm
@@ -693,18 +693,17 @@ cdef void init_gaussian_params(): #vector[float] log_2vMm):
 
     fname = "Gaussian_minmax_" + str(len(log_2vMm)) + ".dat"
     try:
-        with open(fname, 'rb') as f:
-            print(" (from cache)... ", end="\n")
-            lt = pickle.load(f)
-            log_2vMm_min = lt[0]
-            log_2vMm_max = lt[1]
-    except:
+        lt = pickle.load(open(fname, "rb"))
+        print(" (from cache)... ", end="\n")
+        #lt = pickle.load(f)
+        log_2vMm_min = lt[0]
+        log_2vMm_max = lt[1]
+    except (OSError, IOError) as e:
         print("... ", end="\n")
-        log_2vMm_min = np.minimum(log_2vMm)
-        log_2vMm_max = np.maximum(log_2vMm)
+        log_2vMm_min = np.amin(log_2vMm)
+        log_2vMm_max = np.amax(log_2vMm)
         lt = [log_2vMm_min, log_2vMm_max]
-        with open(fname, 'wb') as f:
-            pickle.dump(lt, f)
+        pickle.dump(lt, open(fname, "wb"))
     
     host_params_h_log_2vMm_min = log_2vMm_min
     host_params_h_log_2vMm_max = log_2vMm_max
@@ -734,6 +733,9 @@ cdef void calc_gaussian_params():
     iter_params_h_log_dwG = log_dwG
 
     return
+
+
+
 
 cdef int prepare_blocks():
 
@@ -900,7 +902,7 @@ cdef void iterate(float p, float T):
     #------------------------------------------------------
 
     print("checkpoint -1...")
-    host_params_h_start.record()
+    #host_params_h_start.record()
     
     print("checkpoint 0...")
     cdef int n_blocks
@@ -996,9 +998,9 @@ cdef void iterate(float p, float T):
 
     print("checkpoint 4...")
 
-    host_params_h_stop_DLM.record()
-    cp.cuda.runtime.eventSynchronize(host_params_h_stop_DLM_ptr)
-    host_params_h_elapsedTimeDLM = cp.cuda.get_elapsed_time(host_params_h_start_DLM, host_params_h_stop_DLM)
+    #host_params_h_stop_DLM.record()
+    #cp.cuda.runtime.eventSynchronize(host_params_h_stop_DLM_ptr)
+    #host_params_h_elapsedTimeDLM = cp.cuda.get_elapsed_time(host_params_h_start_DLM, host_params_h_stop_DLM)
     print("<<<LAUNCHED>>> ")
 
     cp.cuda.runtime.deviceSynchronize()
@@ -1065,10 +1067,10 @@ cdef void iterate(float p, float T):
 	# spectrum_h is the k nu
 	
     print("checkpoint 10...")
-    host_params_h_stop.record()
+    #host_params_h_stop.record()
     cp.cuda.runtime.eventSynchronize(host_params_h_stop_ptr)
     print("checkpoint 11...")
-    host_params_h_elapsedTime = cp.cuda.get_elapsed_time(host_params_h_start, host_params_h_stop)
+    #host_params_h_elapsedTime = cp.cuda.get_elapsed_time(host_params_h_start, host_params_h_stop)
 
 
 
@@ -1076,12 +1078,13 @@ cdef void iterate(float p, float T):
 	#cout << "(" << elapsedTime << " ms)" << endl;
     print("[rG = {0}%".format(np.exp(iter_params_h_log_dwG) - 1) * 100, end = " ")
     print("rL = {0}%]".format(np.exp(iter_params_h_log_dwL) - 1) * 100 )
-    print("Runtime: {0}".format(host_params_h_elapsedTimeDLM))
-    print(" + {0}".format(host_params_h_elapsedTime - host_params_h_elapsedTimeDLM), end = " ")
-    print(" = {0} ms".format(host_params_h_elapsedTime))
+    #print("Runtime: {0}".format(host_params_h_elapsedTimeDLM))
+    #print(" + {0}".format(host_params_h_elapsedTime - host_params_h_elapsedTimeDLM), end = " ")
+    #print(" = {0} ms".format(host_params_h_elapsedTime))
 
 
     return
+
 
 def start():
 
@@ -1157,6 +1160,18 @@ def start():
 
     # NOTE: Please make sure you change the limits on line 1161-2 and specify the waverange corresponding to the dataset being used
     dir_path = '/home/pankaj/radis-lab/data-1750-1850/'
+
+    print("Loading log_2vMm.npy...")
+    log_2vMm = np.load(dir_path+'log_2vMm.npy')
+    print("Done!")
+    #spec_h_log_2vMm = log_2vMm
+    init_gaussian_params()
+    print()
+
+    exit()
+
+
+
 
     init_params_h_v_min = 1750.0
     init_params_h_v_max = 1850.0
@@ -1238,6 +1253,8 @@ def start():
     spec_h_log_2vMm = log_2vMm
     init_gaussian_params()
     print()
+
+    exit()
 
     # I inits:
     print("Init I: ")
