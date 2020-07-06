@@ -8,6 +8,7 @@
 
 # Python egg metadata, regenerated from source files by setuptools.
 /*.egg-info
+*.egg
 
 # HITEMP-path:
 HITEMP_path.py
