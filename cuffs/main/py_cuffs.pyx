@@ -472,6 +472,17 @@ def read_npy(fname, arr):
     arr = np.load(fname)
     print("Done!")
 
+# CUSTOM COMPARATOR to sort map keys in non increasing order
+cdef extern from *:
+    """
+    struct greater {
+        bool operator () (const float x, const float y) const {return x > y;}       
+    };
+    """
+    ctypedef struct greater:
+        float a
+        float b
+
 cdef void init_lorentzian_params(): #vector[float] log_2gs, vector[float] na):
 
     # ----------- setup global variables -----------------
@@ -489,7 +500,7 @@ cdef void init_lorentzian_params(): #vector[float] log_2gs, vector[float] na):
     cdef vector[pair[float,float]] duplicates_removed
     cdef vector[float] na_short
     cdef vector[float] log_2gs_short
-    cdef mapcpp[float, float] bottom_envelope_map
+    cdef mapcpp[float, float, greater] bottom_envelope_map # shiet
     cdef mapcpp[float, float] top_envelope_map
 
     cdef vector[float] top_a 
@@ -655,7 +666,7 @@ cdef void calc_lorentzian_params():
     global iter_params_h_log_rT
     global iter_params_h_log_p
     global iter_params_h_log_wL_min
-    global iter_params_h_log_wL_max
+    global iter_params_h_log_dwL
     global epsilon
     #------------------------------------------------------
     
@@ -672,10 +683,10 @@ cdef void calc_lorentzian_params():
             log_wL_max = iter_params_h_log_rT * host_params_h_top_a[i] + host_params_h_top_b[i]  + iter_params_h_log_p + epsilon
             break
         
-    cdef  float log_dwL = (log_wL_max - log_wL_min) / (init_params_h_N_wL - 1)
+    cdef float log_dwL = (log_wL_max - log_wL_min) / (init_params_h_N_wL - 1)
 
     iter_params_h_log_wL_min = log_wL_min
-    iter_params_h_log_wL_max = log_wL_max
+    iter_params_h_log_dwL = log_dwL
     return 
 
 
@@ -914,8 +925,48 @@ cdef void iterate(float p, float T):
     print("checkpoint 0.3...")
     n_blocks = prepare_blocks()
 
-    print("checkpoint 1...")
+    # print(n_blocks)
+    # print()
+    # print(host_params_h_start)
+    # print(host_params_h_start_DLM)
+    # print(host_params_h_DLM_d)
+    # print(host_params_h_DLM_d_in)
+    # print(host_params_h_DLM_d_out)
+    # print(host_params_h_stop_DLM)
+    # print(host_params_h_elapsedTimeDLM)
+    # print(host_params_h_spectrum_d)
+    # print(host_params_h_spectrum_d_in)
+    # print(host_params_h_spectrum_d_out)    
+    # print(init_params_h_N_threads_per_block)
+    # print(init_params_h_N_v)
+    # print(init_params_h_N_wG_x_N_wL)
+    # print(host_params_h_v0_d)
+    # print(host_params_h_da_d)
+    # print(host_params_h_S0_d)
+    # print(host_params_h_El_d)
+    # print(host_params_h_log_2gs_d)
+    # print(host_params_h_na_d)
+    # print(host_params_h_log_2vMm_d)
+    # print(host_params_h_stop)
+    # print(host_params_h_elapsedTime)
+    # print()
+    # print(iter_params_h_p)
+    # print(iter_params_h_log_p)
+    # print(iter_params_h_hlog_T)
+    # print(iter_params_h_log_rT)
+    # print(iter_params_h_c2T)
+    # print(iter_params_h_rQ)
+    # print(iter_params_h_log_wG_min)
+    # print(iter_params_h_log_wL_min)
+    # print(iter_params_h_log_dwG)
+    # print(iter_params_h_log_dwL)
+    # print(iter_params_h_blocks_line_offset)
+    # print(iter_params_h_blocks_iv_offset)
 
+
+
+    print("checkpoint 1...")
+    #exit()
 	# Copy iter_params to device #gpuHandleError(cudaMemcpyToSymbol(iter_params_d, iter_params_h, sizeof(iterData)))
     iter_params_d_p =                   cp.float32(iter_params_h_p)
     print("checkpoint 1.1...")
@@ -1050,7 +1101,8 @@ cdef void iterate(float p, float T):
         init_params_d_N_points_per_thread,
         init_params_d_Max_iterations_per_thread,
         init_params_d_shared_size_floats
-    )
+    ), 
+    host_params_h_shared_size
     )
 
     print("checkpoint 7...")
@@ -1164,7 +1216,7 @@ def start():
     init_params_h_v_min = 1750.0
     init_params_h_v_max = 1850.0
     init_params_h_dv = 0.002
-    init_params_h_N_v = int((init_params_h_v_max - init_params_h_v_max)/init_params_h_dv)
+    init_params_h_N_v = int((init_params_h_v_max - init_params_h_v_min)/init_params_h_dv)
 
     init_params_h_N_wG = 4
     init_params_h_N_wL = 8 
@@ -1260,7 +1312,29 @@ def start():
     print("Number of lines loaded: {0}".format(init_params_h_N_lines))
     print()
 
+    #iterate(0.1, 500)
 
+
+    # print(init_params_h_v_min)
+    # print(init_params_h_v_max)
+    # print(init_params_h_dv)
+    # print(init_params_h_N_v)
+    # print(init_params_h_N_wG)
+    # print(init_params_h_N_wL)
+    # print(init_params_h_N_wG_x_N_wL)
+    # print(init_params_h_N_total)
+    # print(init_params_h_Max_lines)
+    # print(init_params_h_N_lines)
+    # print(init_params_h_N_points_per_block)
+    # print(init_params_h_N_threads_per_block)
+    # print(init_params_h_N_blocks_per_grid)
+    # print(init_params_h_N_points_per_thread)
+    # print(init_params_h_Max_iterations_per_thread)
+    # print(init_params_h_shared_size_floats)
+
+
+
+    #exit()
     # print("---> starting iterate method early <-----")
     # print("checkpoint 0...")
     # cdef int n_blocks
@@ -1272,8 +1346,6 @@ def start():
     # print("checkpoint 0.3...")
     # n_blocks = prepare_blocks()
     # print("successfully ran iterate prep methods... back to allocating memory")
-
-
 
     print("Allocating device memory...")
 
