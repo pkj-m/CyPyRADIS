@@ -1,6 +1,7 @@
 import py_cuffs as pyc
 import sys
 import numpy as np
+from HITEMP_path import HITEMP_path
 
 def read_npy(fname, arr):
     print("Loading {0}...".format(fname))
@@ -8,7 +9,7 @@ def read_npy(fname, arr):
     print("Done!")
 
 def main():
-    dir_path = '/home/pankaj/radis-lab/'
+    dir_path = HITEMP_path
 
     v0 = np.array(0,dtype="float")
     da = np.array(0,dtype="float")
@@ -122,5 +123,6 @@ def main():
     for T in range(T_min, T_max, dT):
         iterate(p, T, spectrum_h)
 
-
+if __name__ == '__main__':
+    main()
 
