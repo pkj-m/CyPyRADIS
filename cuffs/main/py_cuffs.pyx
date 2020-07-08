@@ -12,6 +12,7 @@ from libcpp.set cimport set
 from libcpp.utility cimport pair
 from libcpp.map cimport map as mapcpp
 from cython.operator import dereference, postincrement
+import ctypes
 
 
 cdef float epsilon = 0.0001
@@ -93,28 +94,78 @@ host_params_h_spectrum_d_out = None
 #    initData: init_params_h       #
 # ----------------------------------
 
+class initData(ctypes.Structure):
+    _fields_= [
+        ("v_min", ctypes.c_float),
+        ("v_max", ctypes.c_float),
+        ("dv", ctypes.c_float),
+
+        ("N_v", ctypes.c_int),
+        ("N_wG", ctypes.c_int),
+        ("N_wL", ctypes.c_int),
+        ("N_wG_x_N_wL", ctypes.c_int),
+        ("N_total", ctypes.c_int),
+
+        ("Max_lines", ctypes.c_int),
+        ("N_lines", ctypes.c_int),
+        ("N_points_per_block", ctypes.c_int),
+        ("N_threads_per_block", ctypes.c_int),
+        ("N_blocks_per_grid", ctypes.c_int),
+        ("N_points_per_thread", ctypes.c_int),
+        ("Max_iterations_per_thread", ctypes.c_int),
+
+        ("shared_size_floats", ctypes.c_int)
+    ]
+
+class blockData(ctypes.Structure):
+    _fields_=[
+        ("line_offset", ctypes.c_int),
+        ("iv_offset", ctypes.c_int)
+    ]
+
+class iterData(ctypes.Structure):
+    _fields_=[
+        ("p", ctypes.c_float),
+        ("log_p", ctypes.c_float),
+        ("hlog_T", ctypes.c_float),
+        ("log_rT", ctypes.c_float),
+        ("c2T", ctypes.c_float),
+        ("rQ", ctypes.c_float),
+
+        ("log_wG_min", ctypes.c_float),
+        ("log_wL_min", ctypes.c_float),
+        ("log_dwG", ctypes.c_float),
+        ("log_dwL", ctypes.c_float),
+
+        ("blocks", blockData * 4096)
+    ]
+
+init_params_h = initData()
+iter_params_h = iterData()
+
+
 # DLM spectral parameters
-cdef float init_params_h_v_min
-cdef float init_params_h_v_max
-cdef float init_params_h_dv
+# cdef float init_params_h_v_min
+# cdef float init_params_h_v_max
+# cdef float init_params_h_dv
 
-# DLM sizes:
-cdef int init_params_h_N_v
-cdef int init_params_h_N_wG
-cdef int init_params_h_N_wL
-cdef int init_params_h_N_wG_x_N_wL
-cdef int init_params_h_N_total
+# # DLM sizes:
+# cdef int init_params_h_N_v
+# cdef int init_params_h_N_wG
+# cdef int init_params_h_N_wL
+# cdef int init_params_h_N_wG_x_N_wL
+# cdef int init_params_h_N_total
 
-# work parameters:
-cdef int init_params_h_Max_lines
-cdef int init_params_h_N_lines
-cdef int init_params_h_N_points_per_block
-cdef int init_params_h_N_threads_per_block
-cdef int init_params_h_N_blocks_per_grid
-cdef int init_params_h_N_points_per_thread
-cdef int init_params_h_Max_iterations_per_thread
+# # work parameters:
+# cdef int init_params_h_Max_lines
+# cdef int init_params_h_N_lines
+# cdef int init_params_h_N_points_per_block
+# cdef int init_params_h_N_threads_per_block
+# cdef int init_params_h_N_blocks_per_grid
+# cdef int init_params_h_N_points_per_thread
+# cdef int init_params_h_Max_iterations_per_thread
 
-cdef int init_params_h_shared_size_floats
+# cdef int init_params_h_shared_size_floats
 
 # ---------------------------------
 
@@ -123,22 +174,22 @@ cdef int init_params_h_shared_size_floats
 #       iterData: iter_params_h          #
 #-----------------------------------------
 
-# pressure and temperature
-cdef float iter_params_h_p
-cdef float iter_params_h_log_p
-cdef float iter_params_h_hlog_T
-cdef float iter_params_h_log_rT
-cdef float iter_params_h_c2T
-cdef float iter_params_h_rQ
+# # pressure and temperature
+# cdef float iter_params_h_p
+# cdef float iter_params_h_log_p
+# cdef float iter_params_h_hlog_T
+# cdef float iter_params_h_log_rT
+# cdef float iter_params_h_c2T
+# cdef float iter_params_h_rQ
 
-# spectral parameters
-cdef float iter_params_h_log_wG_min
-cdef float iter_params_h_log_wL_min
-cdef float iter_params_h_log_dwG
-cdef float iter_params_h_log_dwL
+# # spectral parameters
+# cdef float iter_params_h_log_wG_min
+# cdef float iter_params_h_log_wL_min
+# cdef float iter_params_h_log_dwG
+# cdef float iter_params_h_log_dwL
 
-cdef int iter_params_h_blocks_line_offset[4096]
-cdef int iter_params_h_blocks_iv_offset[4096]
+# cdef int iter_params_h_blocks_line_offset[4096]
+# cdef int iter_params_h_blocks_iv_offset[4096]
 
 #------------------------------------------
 
@@ -174,22 +225,22 @@ cdef  vector[float] spec_h_log_2gs
 #    initData: init_params_d       #
 # ----------------------------------
 
-init_params_d_v_min = None
-init_params_d_v_max = None
-init_params_d_dv = None
-init_params_d_N_v = None
-init_params_d_N_wG = None
-init_params_d_N_wL = None
-init_params_d_N_wG_x_N_wL = None
-init_params_d_N_total = None
-init_params_d_Max_lines = None
-init_params_d_N_lines = None
-init_params_d_N_points_per_block = None
-init_params_d_N_threads_per_block = None
-init_params_d_N_blocks_per_grid = None
-init_params_d_N_points_per_thread = None
-init_params_d_Max_iterations_per_thread = None
-init_params_d_shared_size_floats = None
+# init_params_d_v_min = None
+# init_params_d_v_max = None
+# init_params_d_dv = None
+# init_params_d_N_v = None
+# init_params_d_N_wG = None
+# init_params_d_N_wL = None
+# init_params_d_N_wG_x_N_wL = None
+# init_params_d_N_total = None
+# init_params_d_Max_lines = None
+# init_params_d_N_lines = None
+# init_params_d_N_points_per_block = None
+# init_params_d_N_threads_per_block = None
+# init_params_d_N_blocks_per_grid = None
+# init_params_d_N_points_per_thread = None
+# init_params_d_Max_iterations_per_thread = None
+# init_params_d_shared_size_floats = None
 
 iter_params_d_p = None
 iter_params_d_log_p = None
@@ -233,6 +284,58 @@ fillDLM_c_code = r'''
 
 #include<cupy/complex.cuh>
 extern "C"{
+
+struct initData {
+	//DLM spectral parameters:
+	float v_min;
+	float v_max;	//Host only
+	float dv;
+
+	// DLM sizes:
+	int N_v;
+	int N_wG;
+	int N_wL;
+	int N_wG_x_N_wL;
+	int N_total;
+
+	//Work parameters :
+	int Max_lines;
+	int N_lines;
+	int N_points_per_block;
+	int N_threads_per_block;
+	int N_blocks_per_grid;
+	int N_points_per_thread;
+	int	Max_iterations_per_thread;
+
+	int shared_size_floats;
+};
+
+struct iterData {
+	//Any info needed for the Kernel that does not change during 
+	//kernel execution but MAY CHANGE during spectral iteration step
+
+	//Pressure & temperature:
+	float p;
+	//float T;
+	float log_p;
+	float hlog_T;
+	float log_rT;
+	float c2T;
+	float rQ;
+
+	//Spectral parameters:
+	float log_wG_min;
+	float log_wL_min;
+	float log_dwG;
+	float log_dwL;
+
+	//Block data:
+	blockData blocks[4096];//4096
+};
+
+__device__ __constant__ initData init_params_d;
+__device__ __constant__ iterData iter_params_d;
+
 __global__ void fillDLM(
 	float* v0,
 	float* da,
@@ -1265,7 +1368,6 @@ def start():
 
     host_params_h_v0_dec = np.minimum.reduceat(v0, np.arange(0, len(v0), init_params_h_N_threads_per_block))     #decimate (v0, v0_dec, init_params_h_N_threads_per_block)
     host_params_h_dec_size = host_params_h_v0_dec.size()
-
     host_params_h_da_dec = np.minimum.reduceat(da, np.arange(0, len(da), init_params_h_N_threads_per_block)) #decimate (da, da_dec, init_params_h_N_threads_per_block)
     print()
 
