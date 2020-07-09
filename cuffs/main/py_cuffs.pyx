@@ -316,9 +316,6 @@ struct blockData {
 };
 
 struct iterData {
-	//Any info needed for the Kernel that does not change during 
-	//kernel execution but MAY CHANGE during spectral iteration step
-
 	//Pressure & temperature:
 	float p;
 	//float T;
@@ -349,62 +346,59 @@ __global__ void fillDLM(
 	float* log_2gs,
 	float* na,
 	float* log_2vMm,
-	float* global_DLM
-    ) {
-    
+	float* global_DLM) {
 
-    int block_line_offset = iter_params_d_blocks_line_offset[blockIdx.x + gridDim.x * blockIdx.y];
-    int block_iv_offset = iter_params_d_blocks_iv_offset[blockIdx.x + gridDim.x * blockIdx.y];
-
+	// Some overhead for "efficient" block allocation:
+	blockData block = iter_params_d.blocks[blockIdx.x + gridDim.x * blockIdx.y];
 	int block_id = blockIdx.x + gridDim.x * blockIdx.y;
-	int N_iterations = (iter_params_d_blocks_line_offset[block_id + 1] - iter_params_d_blocks_line_offset[block_id]) / init_params_d_N_threads_per_block;
-	int DLM_offset = iter_params_d_blocks_iv_offset[block_id] * init_params_d_N_wG_x_N_wL;
-	int iv_offset = iter_params_d_blocks_iv_offset[block_id];
+	int N_iterations = (iter_params_d.blocks[block_id + 1].line_offset - iter_params_d.blocks[block_id].line_offset) / init_params_d.N_threads_per_block;
+	int DLM_offset = iter_params_d.blocks[block_id].iv_offset * init_params_d.N_wG_x_N_wL;
+	int iv_offset = iter_params_d.blocks[block_id].iv_offset;
 
-	int NwG = init_params_d_N_wG;
-	int NwGxNwL = init_params_d_N_wG_x_N_wL;
+	int NwG = init_params_d.N_wG;
+	int NwGxNwL = init_params_d.N_wG_x_N_wL;
 
 	////Allocate and zero the Shared memory
 	extern __shared__ float shared_DLM[];
 
 	float* DLM = global_DLM;
 
-	for (int n = 0; n < N_iterations; n++) { 
+	for (int n = 0; n < N_iterations; n++) { // eliminate for-loop
 
 		// >>: Process from left to right edge:
-		int i = iter_params_d_blocks_line_offset[block_id] + threadIdx.x + n * blockDim.x;
-		
-		if (i < init_params_d_N_lines) {
+		int i = iter_params_d.blocks[block_id].line_offset + threadIdx.x + n * blockDim.x;
+
+		if (i < init_params_d.N_lines) {
 			//Calc v
-			float v_dat = v0[i] + iter_params_d_p * da[i];  // <----- PRESSURE SHIFT
-			float iv = (v_dat - init_params_d_v_min) / init_params_d_dv; // <--- iv_offset;
+			float v_dat = v0[i] + iter_params_d.p * da[i];
+			float iv = (v_dat - init_params_d.v_min) / init_params_d.dv; //- iv_offset;
 			int iv0 = (int)iv;
-			int iv1 = iv0 + 1;
+			int iv1 = iv0 + 1  ;
 
-			if ((iv0 >= 0) && (iv1 < init_params_d_N_v)) {
+			//^4
 
+			if ((iv0 >= 0) && (iv1 < init_params_d.N_v)) {
+				
 				//Calc wG
-				float log_wG_dat = log_2vMm[i] + iter_params_d_hlog_T; // <---- POPULATION
-				float iwG = (log_wG_dat - iter_params_d_log_wG_min) / iter_params_d_log_dwG;
+				float log_wG_dat = log_2vMm[i] + iter_params_d.hlog_T;
+				float iwG = (log_wG_dat - iter_params_d.log_wG_min) / iter_params_d.log_dwG;
 				int iwG0 = (int)iwG;
 				int iwG1 = iwG0 + 1;
 				//^8
 
 				//Calc wL
-				float log_wL_dat = log_2gs[i] + iter_params_d_log_p + na[i] * iter_params_d_log_rT;
-				float iwL = (log_wL_dat - iter_params_d_log_wL_min) / iter_params_d_log_dwL;
-				int iwL0 = (int)iwL;	
+				float log_wL_dat = log_2gs[i] + iter_params_d.log_p + na[i] * iter_params_d.log_rT;
+				float iwL = (log_wL_dat - iter_params_d.log_wL_min) / iter_params_d.log_dwL;
+				int iwL0 = (int)iwL;
 				int iwL1 = iwL0 + 1;
 				//^12
 
-				//Calc I  	Line intensity
-				float I_add = iter_params_d_rQ * S0[i] * (expf(iter_params_d_c2T * El[i]) - expf(iter_params_d_c2T * (El[i] + v0[i])));
-				
-				//  reducing the weak line code would come here
+				//Calc I
+				float I_add = iter_params_d.rQ * S0[i] * (expf(iter_params_d.c2T * El[i]) - expf(iter_params_d.c2T * (El[i] + v0[i])));
 
 				float av = iv - iv0;
-				float awG = (iwG - iwG0) * expf((iwG1 - iwG) * iter_params_d_log_dwG);
-				float awL = (iwL - iwL0) * expf((iwL1 - iwL) * iter_params_d_log_dwL);
+				float awG = (iwG - iwG0) * expf((iwG1 - iwG) * iter_params_d.log_dwG);
+				float awL = (iwL - iwL0) * expf((iwL1 - iwL) * iter_params_d.log_dwL);
 
 				float aV00 = (1 - awG) * (1 - awL);
 				float aV01 = (1 - awG) * awL;
@@ -433,9 +427,9 @@ __global__ void applyLineshapes(complex<float>* DLM, complex<float>* spectrum) {
 	const float r4log2 = 0.36067376022224085f; // = 1 / (4 * ln(2))
 	int iv = threadIdx.x + blockDim.x * blockIdx.x;
 
-	if (iv < init_params_d_N_v + 1) {
+	if (iv < init_params_d.N_v + 1) {
 
-		float x = iv / (2 * init_params_d_N_v * init_params_d_dv);
+		float x = iv / (2 * init_params_d.N_v * init_params_d.dv);
 		float mul = 0.0;
         complex<float> out_complex = 0;
         // float out_re = 0.0;
@@ -443,11 +437,11 @@ __global__ void applyLineshapes(complex<float>* DLM, complex<float>* spectrum) {
 		float wG, wL;
 		int index;
 
-		for (int iwG = 0; iwG < init_params_d_N_wG; iwG++) {
-			wG = expf(iter_params_d_log_wG_min + iwG * iter_params_d_log_dwG);
-			for (int iwL = 0; iwL < init_params_d_N_wL; iwL++) {
-				index = iwG + iwL * init_params_d_N_wG + iv * init_params_d_N_wG_x_N_wL;
-				wL = expf(iter_params_d_log_wL_min + iwL * iter_params_d_log_dwL);
+		for (int iwG = 0; iwG < init_params_d.N_wG; iwG++) {
+			wG = expf(iter_params_d.log_wG_min + iwG * iter_params_d.log_dwG);
+			for (int iwL = 0; iwL < init_params_d.N_wL; iwL++) {
+				index = iwG + iwL * init_params_d.N_wG + iv * init_params_d.N_wG_x_N_wL;
+				wL = expf(iter_params_d.log_wL_min + iwL * iter_params_d.log_dwL);
 				mul = expf(-r4log2 * powf(pi * x * wG, 2) - pi * x * wL);
                 out_complex += mul * DLM[index];
 				// out_re += mul * DLM[index].x;   
@@ -985,10 +979,10 @@ cdef void iterate(float p, float T, vector[float] spectrum_h):
     memptr_iter_params_d = cuda_module.get_global("iter_params_d")
 
     iter_params_ptr = ctypes.cast(ctypes.pointer(iter_params_h),ctypes.c_void_p)
-    struct_size = sizeof(iter_params_h)
+    struct_size = ctypes.sizeof(iter_params_h)
     print('sizeof p:', struct_size)
 
-    memptr.copy_from_host(iter_params_ptr,struct_size)
+    memptr_iter_params_d.copy_from_host(iter_params_ptr,struct_size)
 
 
     print("checkpoint 2...")
@@ -1002,7 +996,7 @@ cdef void iterate(float p, float T, vector[float] spectrum_h):
     print("checkpoint 3...")
 
 	# from population calculation to calculating the line set
-    fillDLM ((n_blocks,), (init_params_h_N_threads_per_block,), #host_params_h_shared_size 
+    fillDLM ((n_blocks,), (init_params_h.N_threads_per_block,), #host_params_h_shared_size 
         (
 		host_params_h_v0_d,
 		host_params_h_da_d,
@@ -1012,8 +1006,7 @@ cdef void iterate(float p, float T, vector[float] spectrum_h):
 		host_params_h_na_d,
 		host_params_h_log_2vMm_d,
 		host_params_h_DLM_d_in
-        ),
-        host_params_h_shared_size)
+        ))
 
     print("checkpoint 4...")
 
@@ -1035,7 +1028,7 @@ cdef void iterate(float p, float T, vector[float] spectrum_h):
     cdef int n_threads = 1024
     n_blocks = (init_params_h.N_v + 1) // n_threads + 1
 
-    apply_lineshapes (( n_blocks,), (n_threads,), 
+    applyLineshapes (( n_blocks,), (n_threads,), 
     (
         host_params_h_DLM_d_out, 
         host_params_h_spectrum_d_in,
@@ -1284,12 +1277,12 @@ def start():
 
     # when using CuPy, these lines are redundant...
    
-    host_params_h_DLM_d_in = cp.zeros(2 * (init_params_h_N_v + 1) * init_params_h_N_wG_x_N_wL, dtype=cp.float32)
+    host_params_h_DLM_d_in = cp.zeros(2 * (init_params_h.N_v + 1) * init_params_h.N_wG_x_N_wL, dtype=cp.float32)
 	
     #host_params_h.DLM_d_in = (cufftReal*)host_params_h.DLM_d;                   <-- how are these going to work?
 	#host_params_h.DLM_d_out = (cufftComplex*)host_params_h.DLM_d;
 
-    host_params_h_spectrum_d_in = cp.zeros(2*(init_params_h_N_v + 1), dtype=cp.complex64)
+    host_params_h_spectrum_d_in = cp.zeros(2*(init_params_h.N_v + 1), dtype=cp.complex64)
 	
     
     #host_params_h.spectrum_d_in = (cufftComplex*)host_params_h.spectrum_d;
@@ -1321,19 +1314,19 @@ def start():
     memptr_init_params_d = cuda_module.get_global("init_params_d")
 
     init_params_ptr = ctypes.cast(ctypes.pointer(init_params_h),ctypes.c_void_p)
-    struct_size = sizeof(init_params_h)
+    struct_size = ctypes.sizeof(init_params_h)
     print('sizeof p:', struct_size)
 
-    memptr.copy_from_host(init_params_ptr,struct_size)
+    memptr_init_params_d.copy_from_host(init_params_ptr,struct_size)
 
 	# #Copy spectral data to device
-    host_params_h_v0_d =        cp.array(spec_h_v0)
-    host_params_h_da_d =        cp.array(spec_h_da)
-    host_params_h_S0_d =        cp.array(spec_h_S0)
-    host_params_h_El_d =        cp.array(spec_h_El)
-    host_params_h_log_2gs_d =   cp.array(spec_h_log_2gs)
-    host_params_h_na_d =        cp.array(spec_h_na)
-    host_params_h_log_2vMm_d =  cp.array(spec_h_log_2vMm)
+    host_params_h_v0_d =        cp.array(spec_h.v0)
+    host_params_h_da_d =        cp.array(spec_h.da)
+    host_params_h_S0_d =        cp.array(spec_h.S0)
+    host_params_h_El_d =        cp.array(spec_h.El)
+    host_params_h_log_2gs_d =   cp.array(spec_h.log_2gs)
+    host_params_h_na_d =        cp.array(spec_h.na)
+    host_params_h_log_2vMm_d =  cp.array(spec_h.log_2vMm)
     
     print("Done!")
 
