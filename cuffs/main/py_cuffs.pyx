@@ -264,14 +264,14 @@ __global__ void fillDLM(
 				//atomicAdd(&DLM[iwG1 + iwL1 * NwG + iv0 * NwGxNwL], aV11 * Iv0);
 				//atomicAdd(&DLM[iwG1 + iwL1 * NwG + iv1 * NwGxNwL], aV11 * Iv1);
 
-                DLM[iwG0 + iwL0 * NwG + iv0 * NwGxNwL] += (aV00 * Iv0);
-                DLM[iwG0 + iwL0 * NwG + iv1 * NwGxNwL] += (aV00 * Iv1);
-                DLM[iwG0 + iwL1 * NwG + iv0 * NwGxNwL] += (aV01 * Iv0);
-                DLM[iwG0 + iwL1 * NwG + iv1 * NwGxNwL] += (aV01 * Iv1); 
-                DLM[iwG1 + iwL0 * NwG + iv0 * NwGxNwL] += (aV10 * Iv0);
-                DLM[iwG1 + iwL0 * NwG + iv1 * NwGxNwL] += (aV10 * Iv1);
-                DLM[iwG1 + iwL1 * NwG + iv0 * NwGxNwL] += (aV11 * Iv0);
-                DLM[iwG1 + iwL1 * NwG + iv1 * NwGxNwL] += (aV11 * Iv1);
+                DLM[iwG0 + iwL0 * NwG + iv0 * NwGxNwL] += (aV00 * Iv0 + 1);
+                DLM[iwG0 + iwL0 * NwG + iv1 * NwGxNwL] += (aV00 * Iv1 + 1);
+                DLM[iwG0 + iwL1 * NwG + iv0 * NwGxNwL] += (aV01 * Iv0 + 1);
+                DLM[iwG0 + iwL1 * NwG + iv1 * NwGxNwL] += (aV01 * Iv1 + 1); 
+                DLM[iwG1 + iwL0 * NwG + iv0 * NwGxNwL] += (aV10 * Iv0 + 1);
+                DLM[iwG1 + iwL0 * NwG + iv1 * NwGxNwL] += (aV10 * Iv1 + 1);
+                DLM[iwG1 + iwL1 * NwG + iv0 * NwGxNwL] += (aV11 * Iv0 + 1);
+                DLM[iwG1 + iwL1 * NwG + iv1 * NwGxNwL] += (aV11 * Iv1 + 1);
 			}
 		}
 	} 
@@ -703,17 +703,17 @@ cdef void iterate(float p, float T, np.ndarray[dtype=np.float32_t, ndim=1] spect
 
     global host_params_h_start
 
-    global host_params_h_start_DLM
-    global host_params_h_DLM_d
-    global host_params_h_DLM_d_in
-    global host_params_h_DLM_d_out
-    global host_params_h_stop_DLM
-    global host_params_h_elapsedTimeDLM
+    # global host_params_h_start_DLM
+    # global host_params_h_DLM_d
+    # global host_params_h_DLM_d_in
+    # global host_params_h_DLM_d_out
+    # global host_params_h_stop_DLM
+    # global host_params_h_elapsedTimeDLM
 
     #global host_params_h_shared_size
-    global host_params_h_spectrum_d
-    global host_params_h_spectrum_d_in
-    global host_params_h_spectrum_d_out    
+    # global host_params_h_spectrum_d
+    # global host_params_h_spectrum_d_in
+    # global host_params_h_spectrum_d_out    
 
     global init_params_h, iter_params_h
 
@@ -824,11 +824,16 @@ cdef void iterate(float p, float T, np.ndarray[dtype=np.float32_t, ndim=1] spect
 
     print("checkpoint 2...")
 	# Zero DLM:
-    host_params_h_DLM_d_in.fill(0)  #gpuHandleError(cudaMemset(host_params_h_DLM_d, 0, 2 * (init_params_h_N_v + 1) * init_params_h_N_wG_x_N_wL * sizeof(float)))
+
+
+    host_params_h_DLM_d_in = cp.zeros(2 * (init_params_h.N_v + 1) * init_params_h.N_wG_x_N_wL, dtype=cp.float32)
+    host_params_h_spectrum_d_in = cp.zeros(2*(init_params_h.N_v + 1), dtype=cp.complex64)
+
+    #host_params_h_DLM_d_in.fill(0)  #gpuHandleError(cudaMemset(host_params_h_DLM_d, 0, 2 * (init_params_h_N_v + 1) * init_params_h_N_wG_x_N_wL * sizeof(float)))
 
     print("Getting ready...")
 	# Launch Kernel:
-    host_params_h_start_DLM.record()
+    #host_params_h_start_DLM.record()
 
     print("checkpoint 3...")
 
@@ -869,6 +874,8 @@ cdef void iterate(float p, float T, np.ndarray[dtype=np.float32_t, ndim=1] spect
     host_params_h_DLM_d_out = cp.fft.rfftn(host_params_h_DLM_d_in) #cufftExecR2C(host_params_h_plan_DLM, host_params_h_DLM_d_in, host_params_h_DLM_d_out)
     cp.cuda.runtime.deviceSynchronize()
 
+    print("host_params_h_DLM_d_out: ")
+    print(host_params_h_DLM_d_out)
     print("checkpoint 6...")
 
     cdef int n_threads = 1024
@@ -888,6 +895,9 @@ cdef void iterate(float p, float T, np.ndarray[dtype=np.float32_t, ndim=1] spect
 	# inverse FFT
     host_params_h_spectrum_d_out = cp.fft.irfft(host_params_h_spectrum_d_in) #	#cufftExecC2R(host_params_h_plan_spectrum, host_params_h_spectrum_d_in, host_params_h_spectrum_d_out)
     cp.cuda.runtime.deviceSynchronize()
+
+    print("host_params_h_spectrum_d_out: ")
+    print(host_params_h_spectrum_d_out)
 
     print("checkpoint 9...")
     spectrum_h = host_params_h_spectrum_d_out.get()  ##gpuHandleError(cudaMemcpy(spectrum_h, host_params_h_spectrum_d, init_params_h_N_v * sizeof(float), cudaMemcpyDeviceToHost))
@@ -1108,12 +1118,7 @@ def start():
 
     # when using CuPy, these lines are redundant...
    
-    host_params_h_DLM_d_in = cp.zeros(2 * (init_params_h.N_v + 1) * init_params_h.N_wG_x_N_wL, dtype=cp.float32)
-	
-    #host_params_h.DLM_d_in = (cufftReal*)host_params_h.DLM_d;                   <-- how are these going to work?
-	#host_params_h.DLM_d_out = (cufftComplex*)host_params_h.DLM_d;
-
-    host_params_h_spectrum_d_in = cp.zeros(2*(init_params_h.N_v + 1), dtype=cp.complex64)
+    
 	
     
     #host_params_h.spectrum_d_in = (cufftComplex*)host_params_h.spectrum_d;
