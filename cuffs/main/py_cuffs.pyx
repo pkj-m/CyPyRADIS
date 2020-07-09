@@ -1008,9 +1008,10 @@ cdef void iterate(float p, float T, np.ndarray[dtype=np.float32_t, ndim=1] spect
 
 
     print("obtained spectrum_h...")
+    print(spectrum_h)
 	#cout << "(" << elapsedTime << " ms)" << endl;
-    print("[rG = {0}%".format(np.exp(iter_params_h.log_dwG) - 1) * 100, end = " ")
-    print("rL = {0}%]".format(np.exp(iter_params_h.log_dwL) - 1) * 100 )
+    print("[rG = {0}%".format((np.exp(iter_params_h.log_dwG) - 1) * 100), end = " ")
+    print("rL = {0}%]".format((np.exp(iter_params_h.log_dwL) - 1) * 100) )
     #print("Runtime: {0}".format(host_params_h_elapsedTimeDLM))
     #print(" + {0}".format(host_params_h_elapsedTime - host_params_h_elapsedTimeDLM), end = " ")
     #print(" = {0} ms".format(host_params_h_elapsedTime))
