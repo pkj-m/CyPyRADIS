@@ -13,6 +13,7 @@ from libcpp.utility cimport pair
 from libcpp.map cimport map as mapcpp
 from cython.operator import dereference, postincrement
 import ctypes
+from matplotlib import pyplot as plt
 
 
 cdef float epsilon = 0.0001
@@ -913,7 +914,10 @@ cdef void iterate(float p, float T, np.ndarray[dtype=np.float32_t, ndim=1] spect
 
 
     print("obtained spectrum_h...")
+    v_arr = np.array([init_params_h.v_min + i * init_params_h.dv for i in range(init_params_h.N_v)])
     print(spectrum_h)
+    plt.plot(spectrum_h)
+    plt.show()
 	#cout << "(" << elapsedTime << " ms)" << endl;
     print("[rG = {0}%".format((np.exp(iter_params_h.log_dwG) - 1) * 100), end = " ")
     print("rL = {0}%]".format((np.exp(iter_params_h.log_dwL) - 1) * 100) )
