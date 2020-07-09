@@ -35,7 +35,7 @@ class initData(ctypes.Structure):
 init_params_h = initData()
 
               
-def gpu_add(x1,x2,int a,int b):
+def gpu_add():
     global init_params_h
 
     init_params_h.v_min=1.0
@@ -126,15 +126,6 @@ def gpu_add(x1,x2,int a,int b):
         
     module = cp.RawModule(code = cuda_code)
     add_kernel = module.get_function('my_add')
-
-    x1_d = cp.asarray(x1)
-    x2_d = cp.asarray(x2)
-    y_d = cp.zeros((5, 5), dtype=cp.float32)
-
-    ## Transfer struct h2d using constant memory
-    params = floatPair()
-    params.a = a
-    params.b = b
 
     memptr = module.get_global("init_params_d")
     struct_ptr = ctypes.cast(ctypes.pointer(init_params_h),ctypes.c_void_p)
