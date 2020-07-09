@@ -313,7 +313,7 @@ __global__ void fillDLM(
 	////Allocate and zero the Shared memory
 	//extern __shared__ float shared_DLM[];
 
-	//float* DLM = global_DLM;
+	float* DLM = global_DLM;
 
 	for (int n = 0; n < N_iterations; n++) { // eliminate for-loop
 
@@ -360,14 +360,23 @@ __global__ void fillDLM(
 				float Iv0 = I_add * (1 - av);
 				float Iv1 = I_add * av;
 
-				atomicAdd(&global_DLM[iwG0 + iwL0 * NwG + iv0 * NwGxNwL], aV00 * Iv0);
-				atomicAdd(&global_DLM[iwG0 + iwL0 * NwG + iv1 * NwGxNwL], aV00 * Iv1);
-				atomicAdd(&global_DLM[iwG0 + iwL1 * NwG + iv0 * NwGxNwL], aV01 * Iv0);
-				atomicAdd(&global_DLM[iwG0 + iwL1 * NwG + iv1 * NwGxNwL], aV01 * Iv1); 
-				atomicAdd(&global_DLM[iwG1 + iwL0 * NwG + iv0 * NwGxNwL], aV10 * Iv0);
-				atomicAdd(&global_DLM[iwG1 + iwL0 * NwG + iv1 * NwGxNwL], aV10 * Iv1);
-				atomicAdd(&global_DLM[iwG1 + iwL1 * NwG + iv0 * NwGxNwL], aV11 * Iv0);
-				atomicAdd(&global_DLM[iwG1 + iwL1 * NwG + iv1 * NwGxNwL], aV11 * Iv1);
+				//atomicAdd(&DLM[iwG0 + iwL0 * NwG + iv0 * NwGxNwL], aV00 * Iv0);
+				//atomicAdd(&DLM[iwG0 + iwL0 * NwG + iv1 * NwGxNwL], aV00 * Iv1);
+				//atomicAdd(&DLM[iwG0 + iwL1 * NwG + iv0 * NwGxNwL], aV01 * Iv0);
+				//atomicAdd(&DLM[iwG0 + iwL1 * NwG + iv1 * NwGxNwL], aV01 * Iv1); 
+				//atomicAdd(&DLM[iwG1 + iwL0 * NwG + iv0 * NwGxNwL], aV10 * Iv0);
+				//atomicAdd(&DLM[iwG1 + iwL0 * NwG + iv1 * NwGxNwL], aV10 * Iv1);
+				//atomicAdd(&DLM[iwG1 + iwL1 * NwG + iv0 * NwGxNwL], aV11 * Iv0);
+				//atomicAdd(&DLM[iwG1 + iwL1 * NwG + iv1 * NwGxNwL], aV11 * Iv1);
+
+                DLM[iwG0 + iwL0 * NwG + iv0 * NwGxNwL] += (aV00 * Iv0);
+                DLM[iwG0 + iwL0 * NwG + iv1 * NwGxNwL] += (aV00 * Iv1);
+                DLM[iwG0 + iwL1 * NwG + iv0 * NwGxNwL] += (aV01 * Iv0);
+                DLM[iwG0 + iwL1 * NwG + iv1 * NwGxNwL] += (aV01 * Iv1); 
+                DLM[iwG1 + iwL0 * NwG + iv0 * NwGxNwL] += (aV10 * Iv0);
+                DLM[iwG1 + iwL0 * NwG + iv1 * NwGxNwL] += (aV10 * Iv1);
+                DLM[iwG1 + iwL1 * NwG + iv0 * NwGxNwL] += (aV11 * Iv0);
+                DLM[iwG1 + iwL1 * NwG + iv1 * NwGxNwL] += (aV11 * Iv1);
 			}
 		}
 	} 
@@ -462,7 +471,7 @@ cdef extern from *:
         float a
         float b
 
-cdef void init_lorentzian_params(vector[float] log_2gs, vector[float] na):
+cdef void init_lorentzian_params(np.ndarray[dtype=np.float32_t, ndim=1] log_2gs, np.ndarray[dtype=np.float32_t, ndim=1] na):
 
     # ----------- setup global variables -----------------
     global host_params_h_top_a
@@ -664,7 +673,7 @@ cdef void calc_lorentzian_params():
     return 
 
 
-cdef void init_gaussian_params(vector[float] log_2vMm): 
+cdef void init_gaussian_params(np.ndarray[dtype=np.float32_t, ndim=1] log_2vMm): 
 
     # ----------- setup global variables -----------------
     global host_params_h_log_2vMm_min
@@ -793,7 +802,7 @@ cdef int prepare_blocks():
 #    return
 
 
-cdef void iterate(float p, float T, vector[float] spectrum_h):
+cdef void iterate(float p, float T, np.ndarray[dtype=np.float32_t, ndim=1] spectrum_h):
     
     # ----------- setup global variables -----------------
 
@@ -953,7 +962,12 @@ cdef void iterate(float p, float T, vector[float] spectrum_h):
 
     print("printing host_params_h_DLM_d_in: ")
     print(host_params_h_DLM_d_in)
-    exit()
+    
+    print("enter 1 to continue, 0 to exit..")
+    inp = int(input())
+
+    if inp==0:
+        exit()
 
 	# FFT
     # figure out how host_params_h_DLM_d_in points to the same memory location as host_params_h_DLM_d
@@ -1028,26 +1042,19 @@ def start():
     # NOTE: Please make sure you change the limits on line 1161-2 and specify the waverange corresponding to the dataset being used
     dir_path = '/home/pankaj/radis-lab/data-1750-1850/'
 
-    cdef vector[float] v0
-    cdef vector[float] da
-    cdef vector[float] S0
-    cdef vector[float] El
-    cdef vector[float] log_2vMm
-    cdef vector[float] na
-    cdef vector[float] log_2gs
-    cdef vector[float] v0_dec
-    cdef vector[float] da_dec
+    # cdef vector[float] v0
+    # cdef vector[float] da
+    # cdef vector[float] S0
+    # cdef vector[float] El
+    # cdef vector[float] log_2vMm
+    # cdef vector[float] na
+    # cdef vector[float] log_2gs
+    # cdef vector[float] v0_dec
+    # cdef vector[float] da_dec
 
-    cdef vector[float] spectrum_h
-    cdef vector[float] v_arr
+    # cdef vector[float] spectrum_h
+    # cdef vector[float] v_arr
 
-    cdef  vector[float] spec_h_v0
-    cdef  vector[float] spec_h_da
-    cdef  vector[float] spec_h_S0
-    cdef  vector[float] spec_h_El
-    cdef  vector[float] spec_h_log_2vMm
-    cdef  vector[float] spec_h_na
-    cdef  vector[float] spec_h_log_2gs
 
     init_params_h.v_min = 1750.0
     init_params_h.v_max = 1850.0
@@ -1056,10 +1063,11 @@ def start():
 
     init_params_h.N_wG = 4
     init_params_h.N_wL = 8 
-    spectrum_h.resize(init_params_h.N_v)
-    for i in range(init_params_h.N_v):
-        v_arr.push_back(init_params_h.v_min + i * init_params_h.dv)
-    #v_arr = [init_params_h_v_min + i * init_params_h_dv for i in range(init_params_h_N_v)]
+    cdef np.ndarray[dtype=np.float32_t, ndim=1] spectrum_h = np.zeros(init_params_h.N_v, dtype=np.float32)
+
+    # for i in range(init_params_h.N_v):
+    #     v_arr.push_back(init_params_h.v_min + i * init_params_h.dv)
+    #cdef np.ndarray[dtype=np.float32_t, ndim=1] v_arr = np.array([init_params_h.v_min + i * init_params_h.dv for i in range(init_params_h.N_v)])
 
     init_params_h.Max_iterations_per_thread = 1024
     host_params_h_block_preparation_step_size = 128
@@ -1090,16 +1098,16 @@ def start():
     #read_npy(dir_path+'v0.npy', v0)
     
     print("Loading v0.npy...")
-    v0 = np.load(dir_path+'v0.npy')
+    cdef np.ndarray[dtype=np.float32_t, ndim=1] v0 = np.load(dir_path+'v0.npy')
     print("Done!")
-    spec_h_v0 = (ctypes.c_float * len(v0))(*v0)
+    cdef np.ndarray[dtype=np.float32_t, ndim=1] spec_h_v0 = v0
     
     #read_npy(dir_path+'da.npy', da)
 
     print("Loading da.npy...")
-    da = np.load(dir_path+'da.npy')
+    cdef np.ndarray[dtype=np.float32_t, ndim=1] da = np.load(dir_path+'da.npy')
     print("Done!")
-    spec_h_da = (ctypes.c_float * len(da))(*da)
+    cdef np.ndarray[dtype=np.float32_t, ndim=1] spec_h_da = da
 
     host_params_h_v0_dec = np.minimum.reduceat(v0, np.arange(0, len(v0), init_params_h.N_threads_per_block))     #decimate (v0, v0_dec, init_params_h_N_threads_per_block)
     host_params_h_dec_size = host_params_h_v0_dec.size()
@@ -1110,14 +1118,14 @@ def start():
     print("Init wL: ")
     #read_npy(dir_path + 'log_2gs.npy', log_2gs)
     print("Loading log_2gs.npy...")
-    log_2gs = np.load(dir_path+'log_2gs.npy')
+    cdef np.ndarray[dtype=np.float32_t, ndim=1] log_2gs = np.load(dir_path+'log_2gs.npy')
     print("Done!")
-    spec_h_log_2gs = (ctypes.c_float * len(log_2gs))(*log_2gs)
+    cdef np.ndarray[dtype=np.float32_t, ndim=1] spec_h_log_2gs = log_2gs
     #read_npy(dir_path + 'na.npy', na)
     print("Loading na.npy...")
-    na = np.load(dir_path+'na.npy')
+    cdef np.ndarray[dtype=np.float32_t, ndim=1] na = np.load(dir_path+'na.npy')
     print("Done!")
-    spec_h_na = (ctypes.c_float * len(na))(*na)
+    cdef np.ndarray[dtype=np.float32_t, ndim=1] spec_h_na = na
     init_lorentzian_params(log_2gs, na)
     print()
 
@@ -1125,9 +1133,9 @@ def start():
     print("Init wG: ")
     #read_npy(dir_path + 'log_2vMm.npy', log_2vMm)
     print("Loading log_2vMm.npy...")
-    log_2vMm = np.load(dir_path+'log_2vMm.npy')
+    cdef np.ndarray[dtype=np.float32_t, ndim=1] log_2vMm = np.load(dir_path+'log_2vMm.npy')
     print("Done!")
-    spec_h_log_2vMm = (ctypes.c_float * len(log_2vMm))(*log_2vMm)
+    cdef np.ndarray[dtype=np.float32_t, ndim=1] spec_h_log_2vMm = log_2vMm
     init_gaussian_params(log_2vMm)
     print()
 
@@ -1135,14 +1143,14 @@ def start():
     print("Init I: ")
     #read_npy(dir_path + 'S0.npy', S0)
     print("Loading S0.npy...")
-    S0 = np.load(dir_path+'S0.npy')
+    cdef np.ndarray[dtype=np.float32_t, ndim=1] S0 = np.load(dir_path+'S0.npy')
     print("Done!")
-    spec_h_S0 = (ctypes.c_float * len(S0))(*S0)
+    cdef np.ndarray[dtype=np.float32_t, ndim=1] spec_h_S0 = S0
     #read_npy(dir_path + 'El.npy', El)
     print("Loading El.npy...")
-    El = np.load(dir_path+'El.npy')
+    cdef np.ndarray[dtype=np.float32_t, ndim=1] El = np.load(dir_path+'El.npy')
     print("Done!")
-    spec_h_El = (ctypes.c_float * len(El))(*El)
+    cdef np.ndarray[dtype=np.float32_t, ndim=1] spec_h_El = El
     print()
 
     init_params_h.N_lines = int(len(v0))
