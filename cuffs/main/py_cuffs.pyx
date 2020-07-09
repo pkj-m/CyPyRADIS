@@ -88,11 +88,6 @@ host_params_h_DLM_d_out = None
 host_params_h_spectrum_d_in = None
 host_params_h_spectrum_d_out = None
 
-#-----------------------------------
-
-#-----------------------------------
-#    initData: init_params_h       #
-# ----------------------------------
 
 class initData(ctypes.Structure):
     _fields_= [
@@ -140,112 +135,12 @@ class iterData(ctypes.Structure):
         ("blocks", blockData * 4096)
     ]
 
-# class spectralData(ctypes.Structure):
-#     _fields_=[
-#         ("v0", ctypes.POINTER(ctypes.c_float)),
-#         ("da", ctypes.POINTER(ctypes.c_float)),
-#         ("S0", ctypes.POINTER(ctypes.c_float)),
-#         ("El", ctypes.POINTER(ctypes.c_float)),
-#         ("log_2vMm", ctypes.POINTER(ctypes.c_float)),
-#         ("na", ctypes.POINTER(ctypes.c_float)),
-#         ("log_2gs", ctypes.POINTER(ctypes.c_float))
-#     ]
+
 
 init_params_h = initData()
 iter_params_h = iterData()
-#spec_h = spectralData()
-
-# DLM spectral parameters
-# cdef float init_params_h_v_min
-# cdef float init_params_h_v_max
-# cdef float init_params_h_dv
-
-# # DLM sizes:
-# cdef int init_params_h_N_v
-# cdef int init_params_h_N_wG
-# cdef int init_params_h_N_wL
-# cdef int init_params_h_N_wG_x_N_wL
-# cdef int init_params_h_N_total
-
-# # work parameters:
-# cdef int init_params_h_Max_lines
-# cdef int init_params_h_N_lines
-# cdef int init_params_h_N_points_per_block
-# cdef int init_params_h_N_threads_per_block
-# cdef int init_params_h_N_blocks_per_grid
-# cdef int init_params_h_N_points_per_thread
-# cdef int init_params_h_Max_iterations_per_thread
-
-# cdef int init_params_h_shared_size_floats
-
-# ---------------------------------
-
-
-#-----------------------------------------
-#       iterData: iter_params_h          #
-#-----------------------------------------
-
-
-
-#--------------------------------------------
-#       spectralData: spec_h                #
-#--------------------------------------------
-
-# cdef  vector[float] spec_h_v0
-# cdef  vector[float] spec_h_da
-# cdef  vector[float] spec_h_S0
-# cdef  vector[float] spec_h_El
-# cdef  vector[float] spec_h_log_2vMm
-# cdef  vector[float] spec_h_na
-# cdef  vector[float] spec_h_log_2gs
-
-# cdef float* spec_h_v0
-# cdef float* spec_h_da
-# cdef float* spec_h_S0
-# cdef float* spec_h_El
-# cdef float* spec_h_log_2vMm
-# cdef float* spec_h_na
-# cdef float* spec_h_log_2gs
-
-#--------------------------------------------
-
-
-#--------------------------------------------
-#               gpu data                    #
-#--------------------------------------------
-
-#-----------------------------------
-#    initData: init_params_d       #
-# ----------------------------------
-
-
-
-
-####################################
-
-# v0 = np.array(0,dtype="float")
-# da = np.array(0,dtype="float")
-# S0 = np.array(0,dtype="float")
-# El = np.array(0,dtype="float")
-# log_2vMm = np.array(0,dtype="float")
-# na = np.array(0,dtype="float")
-# log_2gs = np.array(0,dtype="float")
-# v0_dec = np.array(0,dtype="float")
-# da_dec = np.array(0,dtype="float")
-
-# spectrum_h = np.array(0,dtype="float")
-# v_arr = np.array(0,dtype="float")
-
-
-####################################
-######## KERNELS COME HERE #########
-####################################
-
-
-# fillDLM
 
 cuda_code = r'''
-
 #include<cupy/complex.cuh>
 extern "C"{
 
