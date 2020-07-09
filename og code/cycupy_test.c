@@ -1717,7 +1717,7 @@ static const char __pyx_k_N_points_per_thread[] = "N_points_per_thread";
 static const char __pyx_k_N_threads_per_block[] = "N_threads_per_block";
 static const char __pyx_k_Max_iterations_per_thread[] = "Max_iterations_per_thread";
 static const char __pyx_k_ndarray_is_not_C_contiguous[] = "ndarray is not C contiguous";
-static const char __pyx_k_extern_C_also_tell_the_CUDA_com[] = "\n    extern \"C\"{\n        \n        //also tell the CUDA compiler what the struct looks like:\n        struct floatPair{\n            float   a;\n            float   b;\n            };\n\n        struct initData {\n            float v_min;\n            float v_max;\t//Host only\n            float dv;\n\n            // DLM sizes:\n            int N_v;\n            int N_wG;\n            int N_wL;\n            int N_wG_x_N_wL;\n            int N_total;\n\n            //Work parameters :\n            int Max_lines;\n            int N_lines;\n            int N_points_per_block;\n            int N_threads_per_block;\n            int N_blocks_per_grid;\n            int N_points_per_thread;\n            int\tMax_iterations_per_thread;\n\n            int shared_size_floats;\n        };\n        \n        //declare the constant memory variables:\n        __device__ __constant__ floatPair const_struct_d;\n        __device__ __constant__ initData init_params_d;\n\n        \n        __global__ void my_add(float* dummy, int N) {\n            dummy[0] = init_params_d.v_min;\n            dummy[1] = init_params_d.v_max;\t\n            dummy[2] = init_params_d.dv;\n            dummy[3] = init_params_d.N_v;\n            dummy[4] = init_params_d.N_wG;\n            dummy[5] = init_params_d.N_wL;\n            dummy[6] = init_params_d.N_wG_x_N_wL;\n            dummy[7] = init_params_d.N_total;\n            dummy[8] = init_params_d.Max_lines;\n            dummy[9] = init_params_d.N_lines;\n            dummy[10] = init_params_d.N_points_per_block;\n            dummy[11] = init_params_d.N_threads_per_block;\n            dummy[12] = init_params_d.N_blocks_per_grid;\n            dummy[13] = init_params_d.N_points_per_thread;\n            dummy[14] = init_params_d.Max_iterations_per_thread;\n            dummy[15] = init_params_d.shared_size_floats;\n        }\n    }\n    ";
+static const char __pyx_k_include_cupy_complex_cuh_extern[] = "\n    #include<cupy/complex.cuh>\n    extern \"C\"{\n        \n        //also tell the CUDA compiler what the struct looks like:\n        struct floatPair{\n            float   a;\n            float   b;\n            };\n\n        struct initData {\n            float v_min;\n            float v_max;\t//Host only\n            float dv;\n\n            // DLM sizes:\n            int N_v;\n            int N_wG;\n            int N_wL;\n            int N_wG_x_N_wL;\n            int N_total;\n\n            //Work parameters :\n            int Max_lines;\n            int N_lines;\n            int N_points_per_block;\n            int N_threads_per_block;\n            int N_blocks_per_grid;\n            int N_points_per_thread;\n            int\tMax_iterations_per_thread;\n\n            int shared_size_floats;\n        };\n        \n        //declare the constant memory variables:\n        __device__ __constant__ floatPair const_struct_d;\n        __device__ __constant__ initData init_params_d;\n\n        \n        __global__ void my_add(float* dummy, int N) {\n            dummy[0] = expf(0.69314718056);\n            dummy[1] = init_params_d.v_max;\t\n            dummy[2] = init_params_d.dv;\n            dummy[3] = init_params_d.N_v;\n            dummy[4] = init_params_d.N_wG;\n            dummy[5] = init_params_d.N_wL;\n            dummy[6] = init_params_d.N_wG_x_N_wL;\n            dummy[7] = init_params_d.N_total;\n            dummy[8] = init_params_d.Max_lines;\n            dummy[9] = init_params_d.N_lines;\n            dummy[10] = init_params_d.N_points_per_block;\n            dummy[11] = init_params_d.N_threads_per_block;\n            dummy[12] = init_params_d.N_blocks_per_grid;\n            dummy[13] = init_params_d.N_points_per_thread;\n            dummy[14] = init_params_d.Max_iterations_per_thread;\n            dummy[15] = init_params_d.shared_size_floats;\n        }\n    }\n    ";
 static const char __pyx_k_numpy_core_multiarray_failed_to[] = "numpy.core.multiarray failed to import";
 static const char __pyx_k_unknown_dtype_code_in_numpy_pxd[] = "unknown dtype code in numpy.pxd (%d)";
 static const char __pyx_k_Format_string_allocated_too_shor[] = "Format string allocated too short, see comment in numpy.pxd";
@@ -1773,7 +1773,6 @@ static PyObject *__pyx_n_s_dummy_array;
 static PyObject *__pyx_n_s_dv;
 static PyObject *__pyx_kp_s_end;
 static PyObject *__pyx_n_s_end_2;
-static PyObject *__pyx_kp_s_extern_C_also_tell_the_CUDA_com;
 static PyObject *__pyx_n_s_fields;
 static PyObject *__pyx_n_s_file;
 static PyObject *__pyx_n_s_float32;
@@ -1783,6 +1782,7 @@ static PyObject *__pyx_n_s_get_global;
 static PyObject *__pyx_n_s_gpu_add;
 static PyObject *__pyx_n_s_i;
 static PyObject *__pyx_n_s_import;
+static PyObject *__pyx_kp_s_include_cupy_complex_cuh_extern;
 static PyObject *__pyx_n_s_initData;
 static PyObject *__pyx_n_s_init_params_d;
 static PyObject *__pyx_n_s_init_params_h;
@@ -2279,7 +2279,7 @@ static PyObject *__pyx_pf_11cycupy_test_gpu_add(CYTHON_UNUSED PyObject *__pyx_se
  * 
  *     print("\n KERNEL LAUNCHED \n")             # <<<<<<<<<<<<<<
  *     cuda_code = r'''
- *     extern "C"{
+ *     #include<cupy/complex.cuh>
  */
   if (__Pyx_PrintOne(0, __pyx_kp_s_KERNEL_LAUNCHED) < 0) __PYX_ERR(0, 66, __pyx_L1_error)
 
@@ -2287,42 +2287,42 @@ static PyObject *__pyx_pf_11cycupy_test_gpu_add(CYTHON_UNUSED PyObject *__pyx_se
  * 
  *     print("\n KERNEL LAUNCHED \n")
  *     cuda_code = r'''             # <<<<<<<<<<<<<<
+ *     #include<cupy/complex.cuh>
  *     extern "C"{
- * 
  */
-  __Pyx_INCREF(__pyx_kp_s_extern_C_also_tell_the_CUDA_com);
-  __pyx_v_cuda_code = __pyx_kp_s_extern_C_also_tell_the_CUDA_com;
+  __Pyx_INCREF(__pyx_kp_s_include_cupy_complex_cuh_extern);
+  __pyx_v_cuda_code = __pyx_kp_s_include_cupy_complex_cuh_extern;
 
-  /* "cycupy_test.pyx":126
+  /* "cycupy_test.pyx":127
  *     '''
  * 
  *     module = cp.RawModule(code = cuda_code)             # <<<<<<<<<<<<<<
  *     add_kernel = module.get_function('my_add')
  * 
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_4, __pyx_n_s_cp); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 126, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_4, __pyx_n_s_cp); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 127, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_RawModule); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 126, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_RawModule); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 127, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-  __pyx_t_4 = __Pyx_PyDict_NewPresized(1); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 126, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyDict_NewPresized(1); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 127, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
-  if (PyDict_SetItem(__pyx_t_4, __pyx_n_s_code, __pyx_v_cuda_code) < 0) __PYX_ERR(0, 126, __pyx_L1_error)
-  __pyx_t_2 = __Pyx_PyObject_Call(__pyx_t_1, __pyx_empty_tuple, __pyx_t_4); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 126, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_4, __pyx_n_s_code, __pyx_v_cuda_code) < 0) __PYX_ERR(0, 127, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_Call(__pyx_t_1, __pyx_empty_tuple, __pyx_t_4); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 127, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
   __pyx_v_module = __pyx_t_2;
   __pyx_t_2 = 0;
 
-  /* "cycupy_test.pyx":127
+  /* "cycupy_test.pyx":128
  * 
  *     module = cp.RawModule(code = cuda_code)
  *     add_kernel = module.get_function('my_add')             # <<<<<<<<<<<<<<
  * 
  *     x1_d = cp.asarray(x1)
  */
-  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_module, __pyx_n_s_get_function); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 127, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_module, __pyx_n_s_get_function); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 128, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
   __pyx_t_1 = NULL;
   if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_4))) {
@@ -2336,22 +2336,22 @@ static PyObject *__pyx_pf_11cycupy_test_gpu_add(CYTHON_UNUSED PyObject *__pyx_se
   }
   __pyx_t_2 = (__pyx_t_1) ? __Pyx_PyObject_Call2Args(__pyx_t_4, __pyx_t_1, __pyx_n_s_my_add) : __Pyx_PyObject_CallOneArg(__pyx_t_4, __pyx_n_s_my_add);
   __Pyx_XDECREF(__pyx_t_1); __pyx_t_1 = 0;
-  if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 127, __pyx_L1_error)
+  if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 128, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
   __pyx_v_add_kernel = __pyx_t_2;
   __pyx_t_2 = 0;
 
-  /* "cycupy_test.pyx":129
+  /* "cycupy_test.pyx":130
  *     add_kernel = module.get_function('my_add')
  * 
  *     x1_d = cp.asarray(x1)             # <<<<<<<<<<<<<<
  *     x2_d = cp.asarray(x2)
  *     y_d = cp.zeros((5, 5), dtype=cp.float32)
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_4, __pyx_n_s_cp); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 129, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_4, __pyx_n_s_cp); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 130, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_asarray); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 129, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_asarray); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 130, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
   __pyx_t_4 = NULL;
@@ -2366,22 +2366,22 @@ static PyObject *__pyx_pf_11cycupy_test_gpu_add(CYTHON_UNUSED PyObject *__pyx_se
   }
   __pyx_t_2 = (__pyx_t_4) ? __Pyx_PyObject_Call2Args(__pyx_t_1, __pyx_t_4, __pyx_v_x1) : __Pyx_PyObject_CallOneArg(__pyx_t_1, __pyx_v_x1);
   __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
-  if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 129, __pyx_L1_error)
+  if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 130, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_v_x1_d = __pyx_t_2;
   __pyx_t_2 = 0;
 
-  /* "cycupy_test.pyx":130
+  /* "cycupy_test.pyx":131
  * 
  *     x1_d = cp.asarray(x1)
  *     x2_d = cp.asarray(x2)             # <<<<<<<<<<<<<<
  *     y_d = cp.zeros((5, 5), dtype=cp.float32)
  * 
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_cp); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 130, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_cp); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 131, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_asarray); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 130, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_asarray); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 131, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_t_1 = NULL;
@@ -2396,48 +2396,48 @@ static PyObject *__pyx_pf_11cycupy_test_gpu_add(CYTHON_UNUSED PyObject *__pyx_se
   }
   __pyx_t_2 = (__pyx_t_1) ? __Pyx_PyObject_Call2Args(__pyx_t_4, __pyx_t_1, __pyx_v_x2) : __Pyx_PyObject_CallOneArg(__pyx_t_4, __pyx_v_x2);
   __Pyx_XDECREF(__pyx_t_1); __pyx_t_1 = 0;
-  if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 130, __pyx_L1_error)
+  if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 131, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
   __pyx_v_x2_d = __pyx_t_2;
   __pyx_t_2 = 0;
 
-  /* "cycupy_test.pyx":131
+  /* "cycupy_test.pyx":132
  *     x1_d = cp.asarray(x1)
  *     x2_d = cp.asarray(x2)
  *     y_d = cp.zeros((5, 5), dtype=cp.float32)             # <<<<<<<<<<<<<<
  * 
  *     ## Transfer struct h2d using constant memory
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_2, __pyx_n_s_cp); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 131, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_2, __pyx_n_s_cp); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 132, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_zeros); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 131, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_zeros); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 132, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-  __pyx_t_2 = __Pyx_PyDict_NewPresized(1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 131, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyDict_NewPresized(1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 132, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_cp); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 131, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_cp); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 132, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_float32); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 131, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_float32); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 132, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  if (PyDict_SetItem(__pyx_t_2, __pyx_n_s_dtype, __pyx_t_3) < 0) __PYX_ERR(0, 131, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_2, __pyx_n_s_dtype, __pyx_t_3) < 0) __PYX_ERR(0, 132, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-  __pyx_t_3 = __Pyx_PyObject_Call(__pyx_t_4, __pyx_tuple__3, __pyx_t_2); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 131, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyObject_Call(__pyx_t_4, __pyx_tuple__3, __pyx_t_2); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 132, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __pyx_v_y_d = __pyx_t_3;
   __pyx_t_3 = 0;
 
-  /* "cycupy_test.pyx":134
+  /* "cycupy_test.pyx":135
  * 
  *     ## Transfer struct h2d using constant memory
  *     params = floatPair()             # <<<<<<<<<<<<<<
  *     params.a = a
  *     params.b = b
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_2, __pyx_n_s_floatPair); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 134, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_2, __pyx_n_s_floatPair); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 135, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __pyx_t_4 = NULL;
   if (CYTHON_UNPACK_METHODS && unlikely(PyMethod_Check(__pyx_t_2))) {
@@ -2451,44 +2451,44 @@ static PyObject *__pyx_pf_11cycupy_test_gpu_add(CYTHON_UNUSED PyObject *__pyx_se
   }
   __pyx_t_3 = (__pyx_t_4) ? __Pyx_PyObject_CallOneArg(__pyx_t_2, __pyx_t_4) : __Pyx_PyObject_CallNoArg(__pyx_t_2);
   __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
-  if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 134, __pyx_L1_error)
+  if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 135, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __pyx_v_params = __pyx_t_3;
   __pyx_t_3 = 0;
 
-  /* "cycupy_test.pyx":135
+  /* "cycupy_test.pyx":136
  *     ## Transfer struct h2d using constant memory
  *     params = floatPair()
  *     params.a = a             # <<<<<<<<<<<<<<
  *     params.b = b
  * 
  */
-  __pyx_t_3 = __Pyx_PyInt_From_int(__pyx_v_a); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 135, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyInt_From_int(__pyx_v_a); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 136, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
-  if (__Pyx_PyObject_SetAttrStr(__pyx_v_params, __pyx_n_s_a, __pyx_t_3) < 0) __PYX_ERR(0, 135, __pyx_L1_error)
+  if (__Pyx_PyObject_SetAttrStr(__pyx_v_params, __pyx_n_s_a, __pyx_t_3) < 0) __PYX_ERR(0, 136, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
 
-  /* "cycupy_test.pyx":136
+  /* "cycupy_test.pyx":137
  *     params = floatPair()
  *     params.a = a
  *     params.b = b             # <<<<<<<<<<<<<<
  * 
  *     memptr = module.get_global("init_params_d")
  */
-  __pyx_t_3 = __Pyx_PyInt_From_int(__pyx_v_b); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 136, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyInt_From_int(__pyx_v_b); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 137, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
-  if (__Pyx_PyObject_SetAttrStr(__pyx_v_params, __pyx_n_s_b, __pyx_t_3) < 0) __PYX_ERR(0, 136, __pyx_L1_error)
+  if (__Pyx_PyObject_SetAttrStr(__pyx_v_params, __pyx_n_s_b, __pyx_t_3) < 0) __PYX_ERR(0, 137, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
 
-  /* "cycupy_test.pyx":138
+  /* "cycupy_test.pyx":139
  *     params.b = b
  * 
  *     memptr = module.get_global("init_params_d")             # <<<<<<<<<<<<<<
  *     struct_ptr = ctypes.cast(ctypes.pointer(init_params_h),ctypes.c_void_p)
  *     struct_size = ctypes.sizeof(init_params_h)
  */
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_module, __pyx_n_s_get_global); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 138, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_module, __pyx_n_s_get_global); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 139, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __pyx_t_4 = NULL;
   if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_2))) {
@@ -2502,30 +2502,30 @@ static PyObject *__pyx_pf_11cycupy_test_gpu_add(CYTHON_UNUSED PyObject *__pyx_se
   }
   __pyx_t_3 = (__pyx_t_4) ? __Pyx_PyObject_Call2Args(__pyx_t_2, __pyx_t_4, __pyx_n_s_init_params_d) : __Pyx_PyObject_CallOneArg(__pyx_t_2, __pyx_n_s_init_params_d);
   __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
-  if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 138, __pyx_L1_error)
+  if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 139, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __pyx_v_memptr = __pyx_t_3;
   __pyx_t_3 = 0;
 
-  /* "cycupy_test.pyx":139
+  /* "cycupy_test.pyx":140
  * 
  *     memptr = module.get_global("init_params_d")
  *     struct_ptr = ctypes.cast(ctypes.pointer(init_params_h),ctypes.c_void_p)             # <<<<<<<<<<<<<<
  *     struct_size = ctypes.sizeof(init_params_h)
  *     print('sizeof p:', struct_size)
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_2, __pyx_n_s_ctypes); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 139, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_2, __pyx_n_s_ctypes); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 140, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_cast); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 139, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_cast); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 140, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-  __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_ctypes); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 139, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_ctypes); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 140, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_7 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_pointer); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 139, __pyx_L1_error)
+  __pyx_t_7 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_pointer); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 140, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_7);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_init_params_h); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 139, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_init_params_h); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 140, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_t_8 = NULL;
   if (CYTHON_UNPACK_METHODS && unlikely(PyMethod_Check(__pyx_t_7))) {
@@ -2540,12 +2540,12 @@ static PyObject *__pyx_pf_11cycupy_test_gpu_add(CYTHON_UNUSED PyObject *__pyx_se
   __pyx_t_2 = (__pyx_t_8) ? __Pyx_PyObject_Call2Args(__pyx_t_7, __pyx_t_8, __pyx_t_1) : __Pyx_PyObject_CallOneArg(__pyx_t_7, __pyx_t_1);
   __Pyx_XDECREF(__pyx_t_8); __pyx_t_8 = 0;
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 139, __pyx_L1_error)
+  if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 140, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
-  __Pyx_GetModuleGlobalName(__pyx_t_7, __pyx_n_s_ctypes); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 139, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_7, __pyx_n_s_ctypes); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 140, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_7);
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_7, __pyx_n_s_c_void_p); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 139, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_7, __pyx_n_s_c_void_p); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 140, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
   __pyx_t_7 = NULL;
@@ -2563,7 +2563,7 @@ static PyObject *__pyx_pf_11cycupy_test_gpu_add(CYTHON_UNUSED PyObject *__pyx_se
   #if CYTHON_FAST_PYCALL
   if (PyFunction_Check(__pyx_t_4)) {
     PyObject *__pyx_temp[3] = {__pyx_t_7, __pyx_t_2, __pyx_t_1};
-    __pyx_t_3 = __Pyx_PyFunction_FastCall(__pyx_t_4, __pyx_temp+1-__pyx_t_9, 2+__pyx_t_9); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 139, __pyx_L1_error)
+    __pyx_t_3 = __Pyx_PyFunction_FastCall(__pyx_t_4, __pyx_temp+1-__pyx_t_9, 2+__pyx_t_9); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 140, __pyx_L1_error)
     __Pyx_XDECREF(__pyx_t_7); __pyx_t_7 = 0;
     __Pyx_GOTREF(__pyx_t_3);
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
@@ -2573,7 +2573,7 @@ static PyObject *__pyx_pf_11cycupy_test_gpu_add(CYTHON_UNUSED PyObject *__pyx_se
   #if CYTHON_FAST_PYCCALL
   if (__Pyx_PyFastCFunction_Check(__pyx_t_4)) {
     PyObject *__pyx_temp[3] = {__pyx_t_7, __pyx_t_2, __pyx_t_1};
-    __pyx_t_3 = __Pyx_PyCFunction_FastCall(__pyx_t_4, __pyx_temp+1-__pyx_t_9, 2+__pyx_t_9); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 139, __pyx_L1_error)
+    __pyx_t_3 = __Pyx_PyCFunction_FastCall(__pyx_t_4, __pyx_temp+1-__pyx_t_9, 2+__pyx_t_9); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 140, __pyx_L1_error)
     __Pyx_XDECREF(__pyx_t_7); __pyx_t_7 = 0;
     __Pyx_GOTREF(__pyx_t_3);
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
@@ -2581,7 +2581,7 @@ static PyObject *__pyx_pf_11cycupy_test_gpu_add(CYTHON_UNUSED PyObject *__pyx_se
   } else
   #endif
   {
-    __pyx_t_8 = PyTuple_New(2+__pyx_t_9); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 139, __pyx_L1_error)
+    __pyx_t_8 = PyTuple_New(2+__pyx_t_9); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 140, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_8);
     if (__pyx_t_7) {
       __Pyx_GIVEREF(__pyx_t_7); PyTuple_SET_ITEM(__pyx_t_8, 0, __pyx_t_7); __pyx_t_7 = NULL;
@@ -2592,7 +2592,7 @@ static PyObject *__pyx_pf_11cycupy_test_gpu_add(CYTHON_UNUSED PyObject *__pyx_se
     PyTuple_SET_ITEM(__pyx_t_8, 1+__pyx_t_9, __pyx_t_1);
     __pyx_t_2 = 0;
     __pyx_t_1 = 0;
-    __pyx_t_3 = __Pyx_PyObject_Call(__pyx_t_4, __pyx_t_8, NULL); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 139, __pyx_L1_error)
+    __pyx_t_3 = __Pyx_PyObject_Call(__pyx_t_4, __pyx_t_8, NULL); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 140, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_3);
     __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
   }
@@ -2600,19 +2600,19 @@ static PyObject *__pyx_pf_11cycupy_test_gpu_add(CYTHON_UNUSED PyObject *__pyx_se
   __pyx_v_struct_ptr = __pyx_t_3;
   __pyx_t_3 = 0;
 
-  /* "cycupy_test.pyx":140
+  /* "cycupy_test.pyx":141
  *     memptr = module.get_global("init_params_d")
  *     struct_ptr = ctypes.cast(ctypes.pointer(init_params_h),ctypes.c_void_p)
  *     struct_size = ctypes.sizeof(init_params_h)             # <<<<<<<<<<<<<<
  *     print('sizeof p:', struct_size)
  *     memptr.copy_from_host(struct_ptr,struct_size)
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_4, __pyx_n_s_ctypes); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 140, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_4, __pyx_n_s_ctypes); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 141, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
-  __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_sizeof); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 140, __pyx_L1_error)
+  __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_sizeof); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 141, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-  __Pyx_GetModuleGlobalName(__pyx_t_4, __pyx_n_s_init_params_h); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 140, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_4, __pyx_n_s_init_params_h); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 141, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
   __pyx_t_1 = NULL;
   if (CYTHON_UNPACK_METHODS && unlikely(PyMethod_Check(__pyx_t_8))) {
@@ -2627,20 +2627,20 @@ static PyObject *__pyx_pf_11cycupy_test_gpu_add(CYTHON_UNUSED PyObject *__pyx_se
   __pyx_t_3 = (__pyx_t_1) ? __Pyx_PyObject_Call2Args(__pyx_t_8, __pyx_t_1, __pyx_t_4) : __Pyx_PyObject_CallOneArg(__pyx_t_8, __pyx_t_4);
   __Pyx_XDECREF(__pyx_t_1); __pyx_t_1 = 0;
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-  if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 140, __pyx_L1_error)
+  if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 141, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
   __pyx_v_struct_size = __pyx_t_3;
   __pyx_t_3 = 0;
 
-  /* "cycupy_test.pyx":141
+  /* "cycupy_test.pyx":142
  *     struct_ptr = ctypes.cast(ctypes.pointer(init_params_h),ctypes.c_void_p)
  *     struct_size = ctypes.sizeof(init_params_h)
  *     print('sizeof p:', struct_size)             # <<<<<<<<<<<<<<
  *     memptr.copy_from_host(struct_ptr,struct_size)
  *     print('Done!')
  */
-  __pyx_t_3 = PyTuple_New(2); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 141, __pyx_L1_error)
+  __pyx_t_3 = PyTuple_New(2); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 142, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_INCREF(__pyx_kp_s_sizeof_p);
   __Pyx_GIVEREF(__pyx_kp_s_sizeof_p);
@@ -2648,17 +2648,17 @@ static PyObject *__pyx_pf_11cycupy_test_gpu_add(CYTHON_UNUSED PyObject *__pyx_se
   __Pyx_INCREF(__pyx_v_struct_size);
   __Pyx_GIVEREF(__pyx_v_struct_size);
   PyTuple_SET_ITEM(__pyx_t_3, 1, __pyx_v_struct_size);
-  if (__Pyx_PrintOne(0, __pyx_t_3) < 0) __PYX_ERR(0, 141, __pyx_L1_error)
+  if (__Pyx_PrintOne(0, __pyx_t_3) < 0) __PYX_ERR(0, 142, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
 
-  /* "cycupy_test.pyx":142
+  /* "cycupy_test.pyx":143
  *     struct_size = ctypes.sizeof(init_params_h)
  *     print('sizeof p:', struct_size)
  *     memptr.copy_from_host(struct_ptr,struct_size)             # <<<<<<<<<<<<<<
  *     print('Done!')
  * 
  */
-  __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_v_memptr, __pyx_n_s_copy_from_host); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 142, __pyx_L1_error)
+  __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_v_memptr, __pyx_n_s_copy_from_host); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 143, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
   __pyx_t_4 = NULL;
   __pyx_t_9 = 0;
@@ -2675,7 +2675,7 @@ static PyObject *__pyx_pf_11cycupy_test_gpu_add(CYTHON_UNUSED PyObject *__pyx_se
   #if CYTHON_FAST_PYCALL
   if (PyFunction_Check(__pyx_t_8)) {
     PyObject *__pyx_temp[3] = {__pyx_t_4, __pyx_v_struct_ptr, __pyx_v_struct_size};
-    __pyx_t_3 = __Pyx_PyFunction_FastCall(__pyx_t_8, __pyx_temp+1-__pyx_t_9, 2+__pyx_t_9); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 142, __pyx_L1_error)
+    __pyx_t_3 = __Pyx_PyFunction_FastCall(__pyx_t_8, __pyx_temp+1-__pyx_t_9, 2+__pyx_t_9); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 143, __pyx_L1_error)
     __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
     __Pyx_GOTREF(__pyx_t_3);
   } else
@@ -2683,13 +2683,13 @@ static PyObject *__pyx_pf_11cycupy_test_gpu_add(CYTHON_UNUSED PyObject *__pyx_se
   #if CYTHON_FAST_PYCCALL
   if (__Pyx_PyFastCFunction_Check(__pyx_t_8)) {
     PyObject *__pyx_temp[3] = {__pyx_t_4, __pyx_v_struct_ptr, __pyx_v_struct_size};
-    __pyx_t_3 = __Pyx_PyCFunction_FastCall(__pyx_t_8, __pyx_temp+1-__pyx_t_9, 2+__pyx_t_9); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 142, __pyx_L1_error)
+    __pyx_t_3 = __Pyx_PyCFunction_FastCall(__pyx_t_8, __pyx_temp+1-__pyx_t_9, 2+__pyx_t_9); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 143, __pyx_L1_error)
     __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
     __Pyx_GOTREF(__pyx_t_3);
   } else
   #endif
   {
-    __pyx_t_1 = PyTuple_New(2+__pyx_t_9); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 142, __pyx_L1_error)
+    __pyx_t_1 = PyTuple_New(2+__pyx_t_9); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 143, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
     if (__pyx_t_4) {
       __Pyx_GIVEREF(__pyx_t_4); PyTuple_SET_ITEM(__pyx_t_1, 0, __pyx_t_4); __pyx_t_4 = NULL;
@@ -2700,30 +2700,30 @@ static PyObject *__pyx_pf_11cycupy_test_gpu_add(CYTHON_UNUSED PyObject *__pyx_se
     __Pyx_INCREF(__pyx_v_struct_size);
     __Pyx_GIVEREF(__pyx_v_struct_size);
     PyTuple_SET_ITEM(__pyx_t_1, 1+__pyx_t_9, __pyx_v_struct_size);
-    __pyx_t_3 = __Pyx_PyObject_Call(__pyx_t_8, __pyx_t_1, NULL); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 142, __pyx_L1_error)
+    __pyx_t_3 = __Pyx_PyObject_Call(__pyx_t_8, __pyx_t_1, NULL); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 143, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_3);
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   }
   __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
 
-  /* "cycupy_test.pyx":143
+  /* "cycupy_test.pyx":144
  *     print('sizeof p:', struct_size)
  *     memptr.copy_from_host(struct_ptr,struct_size)
  *     print('Done!')             # <<<<<<<<<<<<<<
  * 
  *     add_kernel((1,), (1,), (dummy_array, 16))
  */
-  if (__Pyx_PrintOne(0, __pyx_kp_s_Done) < 0) __PYX_ERR(0, 143, __pyx_L1_error)
+  if (__Pyx_PrintOne(0, __pyx_kp_s_Done) < 0) __PYX_ERR(0, 144, __pyx_L1_error)
 
-  /* "cycupy_test.pyx":145
+  /* "cycupy_test.pyx":146
  *     print('Done!')
  * 
  *     add_kernel((1,), (1,), (dummy_array, 16))             # <<<<<<<<<<<<<<
  * 
  *     print("array after kernel: ")
  */
-  __pyx_t_8 = PyTuple_New(2); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 145, __pyx_L1_error)
+  __pyx_t_8 = PyTuple_New(2); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 146, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
   __Pyx_INCREF(__pyx_v_dummy_array);
   __Pyx_GIVEREF(__pyx_v_dummy_array);
@@ -2747,7 +2747,7 @@ static PyObject *__pyx_pf_11cycupy_test_gpu_add(CYTHON_UNUSED PyObject *__pyx_se
   #if CYTHON_FAST_PYCALL
   if (PyFunction_Check(__pyx_t_1)) {
     PyObject *__pyx_temp[4] = {__pyx_t_4, __pyx_tuple__4, __pyx_tuple__4, __pyx_t_8};
-    __pyx_t_3 = __Pyx_PyFunction_FastCall(__pyx_t_1, __pyx_temp+1-__pyx_t_9, 3+__pyx_t_9); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 145, __pyx_L1_error)
+    __pyx_t_3 = __Pyx_PyFunction_FastCall(__pyx_t_1, __pyx_temp+1-__pyx_t_9, 3+__pyx_t_9); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 146, __pyx_L1_error)
     __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
     __Pyx_GOTREF(__pyx_t_3);
     __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
@@ -2756,14 +2756,14 @@ static PyObject *__pyx_pf_11cycupy_test_gpu_add(CYTHON_UNUSED PyObject *__pyx_se
   #if CYTHON_FAST_PYCCALL
   if (__Pyx_PyFastCFunction_Check(__pyx_t_1)) {
     PyObject *__pyx_temp[4] = {__pyx_t_4, __pyx_tuple__4, __pyx_tuple__4, __pyx_t_8};
-    __pyx_t_3 = __Pyx_PyCFunction_FastCall(__pyx_t_1, __pyx_temp+1-__pyx_t_9, 3+__pyx_t_9); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 145, __pyx_L1_error)
+    __pyx_t_3 = __Pyx_PyCFunction_FastCall(__pyx_t_1, __pyx_temp+1-__pyx_t_9, 3+__pyx_t_9); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 146, __pyx_L1_error)
     __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
     __Pyx_GOTREF(__pyx_t_3);
     __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
   } else
   #endif
   {
-    __pyx_t_2 = PyTuple_New(3+__pyx_t_9); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 145, __pyx_L1_error)
+    __pyx_t_2 = PyTuple_New(3+__pyx_t_9); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 146, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
     if (__pyx_t_4) {
       __Pyx_GIVEREF(__pyx_t_4); PyTuple_SET_ITEM(__pyx_t_2, 0, __pyx_t_4); __pyx_t_4 = NULL;
@@ -2777,23 +2777,23 @@ static PyObject *__pyx_pf_11cycupy_test_gpu_add(CYTHON_UNUSED PyObject *__pyx_se
     __Pyx_GIVEREF(__pyx_t_8);
     PyTuple_SET_ITEM(__pyx_t_2, 2+__pyx_t_9, __pyx_t_8);
     __pyx_t_8 = 0;
-    __pyx_t_3 = __Pyx_PyObject_Call(__pyx_t_1, __pyx_t_2, NULL); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 145, __pyx_L1_error)
+    __pyx_t_3 = __Pyx_PyObject_Call(__pyx_t_1, __pyx_t_2, NULL); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 146, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_3);
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   }
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
 
-  /* "cycupy_test.pyx":147
+  /* "cycupy_test.pyx":148
  *     add_kernel((1,), (1,), (dummy_array, 16))
  * 
  *     print("array after kernel: ")             # <<<<<<<<<<<<<<
  *     for i in dummy_array:
  *         print(i)
  */
-  if (__Pyx_PrintOne(0, __pyx_kp_s_array_after_kernel) < 0) __PYX_ERR(0, 147, __pyx_L1_error)
+  if (__Pyx_PrintOne(0, __pyx_kp_s_array_after_kernel) < 0) __PYX_ERR(0, 148, __pyx_L1_error)
 
-  /* "cycupy_test.pyx":148
+  /* "cycupy_test.pyx":149
  * 
  *     print("array after kernel: ")
  *     for i in dummy_array:             # <<<<<<<<<<<<<<
@@ -2804,26 +2804,26 @@ static PyObject *__pyx_pf_11cycupy_test_gpu_add(CYTHON_UNUSED PyObject *__pyx_se
     __pyx_t_3 = __pyx_v_dummy_array; __Pyx_INCREF(__pyx_t_3); __pyx_t_5 = 0;
     __pyx_t_6 = NULL;
   } else {
-    __pyx_t_5 = -1; __pyx_t_3 = PyObject_GetIter(__pyx_v_dummy_array); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 148, __pyx_L1_error)
+    __pyx_t_5 = -1; __pyx_t_3 = PyObject_GetIter(__pyx_v_dummy_array); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 149, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_3);
-    __pyx_t_6 = Py_TYPE(__pyx_t_3)->tp_iternext; if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 148, __pyx_L1_error)
+    __pyx_t_6 = Py_TYPE(__pyx_t_3)->tp_iternext; if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 149, __pyx_L1_error)
   }
   for (;;) {
     if (likely(!__pyx_t_6)) {
       if (likely(PyList_CheckExact(__pyx_t_3))) {
         if (__pyx_t_5 >= PyList_GET_SIZE(__pyx_t_3)) break;
         #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
-        __pyx_t_1 = PyList_GET_ITEM(__pyx_t_3, __pyx_t_5); __Pyx_INCREF(__pyx_t_1); __pyx_t_5++; if (unlikely(0 < 0)) __PYX_ERR(0, 148, __pyx_L1_error)
+        __pyx_t_1 = PyList_GET_ITEM(__pyx_t_3, __pyx_t_5); __Pyx_INCREF(__pyx_t_1); __pyx_t_5++; if (unlikely(0 < 0)) __PYX_ERR(0, 149, __pyx_L1_error)
         #else
-        __pyx_t_1 = PySequence_ITEM(__pyx_t_3, __pyx_t_5); __pyx_t_5++; if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 148, __pyx_L1_error)
+        __pyx_t_1 = PySequence_ITEM(__pyx_t_3, __pyx_t_5); __pyx_t_5++; if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 149, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_1);
         #endif
       } else {
         if (__pyx_t_5 >= PyTuple_GET_SIZE(__pyx_t_3)) break;
         #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
-        __pyx_t_1 = PyTuple_GET_ITEM(__pyx_t_3, __pyx_t_5); __Pyx_INCREF(__pyx_t_1); __pyx_t_5++; if (unlikely(0 < 0)) __PYX_ERR(0, 148, __pyx_L1_error)
+        __pyx_t_1 = PyTuple_GET_ITEM(__pyx_t_3, __pyx_t_5); __Pyx_INCREF(__pyx_t_1); __pyx_t_5++; if (unlikely(0 < 0)) __PYX_ERR(0, 149, __pyx_L1_error)
         #else
-        __pyx_t_1 = PySequence_ITEM(__pyx_t_3, __pyx_t_5); __pyx_t_5++; if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 148, __pyx_L1_error)
+        __pyx_t_1 = PySequence_ITEM(__pyx_t_3, __pyx_t_5); __pyx_t_5++; if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 149, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_1);
         #endif
       }
@@ -2833,7 +2833,7 @@ static PyObject *__pyx_pf_11cycupy_test_gpu_add(CYTHON_UNUSED PyObject *__pyx_se
         PyObject* exc_type = PyErr_Occurred();
         if (exc_type) {
           if (likely(__Pyx_PyErr_GivenExceptionMatches(exc_type, PyExc_StopIteration))) PyErr_Clear();
-          else __PYX_ERR(0, 148, __pyx_L1_error)
+          else __PYX_ERR(0, 149, __pyx_L1_error)
         }
         break;
       }
@@ -2842,16 +2842,16 @@ static PyObject *__pyx_pf_11cycupy_test_gpu_add(CYTHON_UNUSED PyObject *__pyx_se
     __Pyx_XDECREF_SET(__pyx_v_i, __pyx_t_1);
     __pyx_t_1 = 0;
 
-    /* "cycupy_test.pyx":149
+    /* "cycupy_test.pyx":150
  *     print("array after kernel: ")
  *     for i in dummy_array:
  *         print(i)             # <<<<<<<<<<<<<<
  * 
  *     print("end...\n")
  */
-    if (__Pyx_PrintOne(0, __pyx_v_i) < 0) __PYX_ERR(0, 149, __pyx_L1_error)
+    if (__Pyx_PrintOne(0, __pyx_v_i) < 0) __PYX_ERR(0, 150, __pyx_L1_error)
 
-    /* "cycupy_test.pyx":148
+    /* "cycupy_test.pyx":149
  * 
  *     print("array after kernel: ")
  *     for i in dummy_array:             # <<<<<<<<<<<<<<
@@ -2861,24 +2861,24 @@ static PyObject *__pyx_pf_11cycupy_test_gpu_add(CYTHON_UNUSED PyObject *__pyx_se
   }
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
 
-  /* "cycupy_test.pyx":151
+  /* "cycupy_test.pyx":152
  *         print(i)
  * 
  *     print("end...\n")             # <<<<<<<<<<<<<<
  * 
  *     return np.arange(25).resize(5,5)
  */
-  if (__Pyx_PrintOne(0, __pyx_kp_s_end) < 0) __PYX_ERR(0, 151, __pyx_L1_error)
+  if (__Pyx_PrintOne(0, __pyx_kp_s_end) < 0) __PYX_ERR(0, 152, __pyx_L1_error)
 
-  /* "cycupy_test.pyx":153
+  /* "cycupy_test.pyx":154
  *     print("end...\n")
  * 
  *     return np.arange(25).resize(5,5)             # <<<<<<<<<<<<<<
  */
   __Pyx_XDECREF(__pyx_r);
-  __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_np); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 153, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_np); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 154, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_arange); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 153, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_arange); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 154, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_t_1 = NULL;
@@ -2893,13 +2893,13 @@ static PyObject *__pyx_pf_11cycupy_test_gpu_add(CYTHON_UNUSED PyObject *__pyx_se
   }
   __pyx_t_3 = (__pyx_t_1) ? __Pyx_PyObject_Call2Args(__pyx_t_2, __pyx_t_1, __pyx_int_25) : __Pyx_PyObject_CallOneArg(__pyx_t_2, __pyx_int_25);
   __Pyx_XDECREF(__pyx_t_1); __pyx_t_1 = 0;
-  if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 153, __pyx_L1_error)
+  if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 154, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_t_3, __pyx_n_s_resize); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 153, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_t_3, __pyx_n_s_resize); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 154, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-  __pyx_t_3 = __Pyx_PyObject_Call(__pyx_t_2, __pyx_tuple__2, NULL); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 153, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyObject_Call(__pyx_t_2, __pyx_tuple__2, NULL); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 154, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __pyx_r = __pyx_t_3;
@@ -5453,7 +5453,6 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_n_s_dv, __pyx_k_dv, sizeof(__pyx_k_dv), 0, 0, 1, 1},
   {&__pyx_kp_s_end, __pyx_k_end, sizeof(__pyx_k_end), 0, 0, 1, 0},
   {&__pyx_n_s_end_2, __pyx_k_end_2, sizeof(__pyx_k_end_2), 0, 0, 1, 1},
-  {&__pyx_kp_s_extern_C_also_tell_the_CUDA_com, __pyx_k_extern_C_also_tell_the_CUDA_com, sizeof(__pyx_k_extern_C_also_tell_the_CUDA_com), 0, 0, 1, 0},
   {&__pyx_n_s_fields, __pyx_k_fields, sizeof(__pyx_k_fields), 0, 0, 1, 1},
   {&__pyx_n_s_file, __pyx_k_file, sizeof(__pyx_k_file), 0, 0, 1, 1},
   {&__pyx_n_s_float32, __pyx_k_float32, sizeof(__pyx_k_float32), 0, 0, 1, 1},
@@ -5463,6 +5462,7 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_n_s_gpu_add, __pyx_k_gpu_add, sizeof(__pyx_k_gpu_add), 0, 0, 1, 1},
   {&__pyx_n_s_i, __pyx_k_i, sizeof(__pyx_k_i), 0, 0, 1, 1},
   {&__pyx_n_s_import, __pyx_k_import, sizeof(__pyx_k_import), 0, 0, 1, 1},
+  {&__pyx_kp_s_include_cupy_complex_cuh_extern, __pyx_k_include_cupy_complex_cuh_extern, sizeof(__pyx_k_include_cupy_complex_cuh_extern), 0, 0, 1, 0},
   {&__pyx_n_s_initData, __pyx_k_initData, sizeof(__pyx_k_initData), 0, 0, 1, 1},
   {&__pyx_n_s_init_params_d, __pyx_k_init_params_d, sizeof(__pyx_k_init_params_d), 0, 0, 1, 1},
   {&__pyx_n_s_init_params_h, __pyx_k_init_params_h, sizeof(__pyx_k_init_params_h), 0, 0, 1, 1},
@@ -5530,28 +5530,28 @@ static CYTHON_SMALL_CODE int __Pyx_InitCachedConstants(void) {
   __Pyx_GOTREF(__pyx_tuple_);
   __Pyx_GIVEREF(__pyx_tuple_);
 
-  /* "cycupy_test.pyx":131
+  /* "cycupy_test.pyx":132
  *     x1_d = cp.asarray(x1)
  *     x2_d = cp.asarray(x2)
  *     y_d = cp.zeros((5, 5), dtype=cp.float32)             # <<<<<<<<<<<<<<
  * 
  *     ## Transfer struct h2d using constant memory
  */
-  __pyx_tuple__2 = PyTuple_Pack(2, __pyx_int_5, __pyx_int_5); if (unlikely(!__pyx_tuple__2)) __PYX_ERR(0, 131, __pyx_L1_error)
+  __pyx_tuple__2 = PyTuple_Pack(2, __pyx_int_5, __pyx_int_5); if (unlikely(!__pyx_tuple__2)) __PYX_ERR(0, 132, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__2);
   __Pyx_GIVEREF(__pyx_tuple__2);
-  __pyx_tuple__3 = PyTuple_Pack(1, __pyx_tuple__2); if (unlikely(!__pyx_tuple__3)) __PYX_ERR(0, 131, __pyx_L1_error)
+  __pyx_tuple__3 = PyTuple_Pack(1, __pyx_tuple__2); if (unlikely(!__pyx_tuple__3)) __PYX_ERR(0, 132, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__3);
   __Pyx_GIVEREF(__pyx_tuple__3);
 
-  /* "cycupy_test.pyx":145
+  /* "cycupy_test.pyx":146
  *     print('Done!')
  * 
  *     add_kernel((1,), (1,), (dummy_array, 16))             # <<<<<<<<<<<<<<
  * 
  *     print("array after kernel: ")
  */
-  __pyx_tuple__4 = PyTuple_Pack(1, __pyx_int_1); if (unlikely(!__pyx_tuple__4)) __PYX_ERR(0, 145, __pyx_L1_error)
+  __pyx_tuple__4 = PyTuple_Pack(1, __pyx_int_1); if (unlikely(!__pyx_tuple__4)) __PYX_ERR(0, 146, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__4);
   __Pyx_GIVEREF(__pyx_tuple__4);
 

@@ -104,22 +104,22 @@ def gpu_add(x1,x2,int a,int b):
 
         
         __global__ void my_add(float* dummy, int N) {
-            dummy[0] = expf(0.69314718056);
-            dummy[1] = init_params_d.v_max;	
-            dummy[2] = init_params_d.dv;
-            dummy[3] = init_params_d.N_v;
-            dummy[4] = init_params_d.N_wG;
-            dummy[5] = init_params_d.N_wL;
-            dummy[6] = init_params_d.N_wG_x_N_wL;
-            dummy[7] = init_params_d.N_total;
-            dummy[8] = init_params_d.Max_lines;
-            dummy[9] = init_params_d.N_lines;
-            dummy[10] = init_params_d.N_points_per_block;
-            dummy[11] = init_params_d.N_threads_per_block;
-            dummy[12] = init_params_d.N_blocks_per_grid;
-            dummy[13] = init_params_d.N_points_per_thread;
-            dummy[14] = init_params_d.Max_iterations_per_thread;
-            dummy[15] = init_params_d.shared_size_floats;
+            atomicAdd(&dummy[0] , init_params_d.v_min);
+            atomicAdd(&dummy[1] , init_params_d.v_max);	
+            atomicAdd(&dummy[2] , init_params_d.dv);
+            atomicAdd(&dummy[3] , init_params_d.N_v);
+            atomicAdd(&dummy[4] , init_params_d.N_wG);
+            atomicAdd(&dummy[5] , init_params_d.N_wL);
+            atomicAdd(&dummy[6] , init_params_d.N_wG_x_N_wL);
+            atomicAdd(&dummy[7] , init_params_d.N_total);
+            atomicAdd(&dummy[8] , init_params_d.Max_lines);
+            atomicAdd(&dummy[9] , init_params_d.N_lines);
+            atomicAdd(&dummy[10] , init_params_d.N_points_per_block);
+            atomicAdd(&dummy[11] , init_params_d.N_threads_per_block);
+            atomicAdd(&dummy[12] , init_params_d.N_blocks_per_grid);
+            atomicAdd(&dummy[13] , init_params_d.N_points_per_thread);
+            atomicAdd(&dummy[14] , init_params_d.Max_iterations_per_thread);
+            atomicAdd(&dummy[15] , init_params_d.shared_size_floats);
         }
     }
     '''
