@@ -265,14 +265,14 @@ __global__ void fillDLM(
 				//atomicAdd(&DLM[iwG1 + iwL1 * NwG + iv0 * NwGxNwL], aV11 * Iv0);
 				//atomicAdd(&DLM[iwG1 + iwL1 * NwG + iv1 * NwGxNwL], aV11 * Iv1);
 
-                DLM[iwG0 + iwL0 * NwG + iv0 * NwGxNwL] += (aV00 * Iv0 + 1);
-                DLM[iwG0 + iwL0 * NwG + iv1 * NwGxNwL] += (aV00 * Iv1 + 1);
-                DLM[iwG0 + iwL1 * NwG + iv0 * NwGxNwL] += (aV01 * Iv0 + 1);
-                DLM[iwG0 + iwL1 * NwG + iv1 * NwGxNwL] += (aV01 * Iv1 + 1); 
-                DLM[iwG1 + iwL0 * NwG + iv0 * NwGxNwL] += (aV10 * Iv0 + 1);
-                DLM[iwG1 + iwL0 * NwG + iv1 * NwGxNwL] += (aV10 * Iv1 + 1);
-                DLM[iwG1 + iwL1 * NwG + iv0 * NwGxNwL] += (aV11 * Iv0 + 1);
-                DLM[iwG1 + iwL1 * NwG + iv1 * NwGxNwL] += (aV11 * Iv1 + 1);
+                DLM[iwG0 + iwL0 * NwG + iv0 * NwGxNwL] += (aV00 * Iv0);
+                DLM[iwG0 + iwL0 * NwG + iv1 * NwGxNwL] += (aV00 * Iv1);
+                DLM[iwG0 + iwL1 * NwG + iv0 * NwGxNwL] += (aV01 * Iv0);
+                DLM[iwG0 + iwL1 * NwG + iv1 * NwGxNwL] += (aV01 * Iv1); 
+                DLM[iwG1 + iwL0 * NwG + iv0 * NwGxNwL] += (aV10 * Iv0);
+                DLM[iwG1 + iwL0 * NwG + iv1 * NwGxNwL] += (aV10 * Iv1);
+                DLM[iwG1 + iwL1 * NwG + iv0 * NwGxNwL] += (aV11 * Iv0);
+                DLM[iwG1 + iwL1 * NwG + iv1 * NwGxNwL] += (aV11 * Iv1);
 			}
 		}
 	} 
@@ -839,6 +839,28 @@ cdef void iterate(float p, float T, np.ndarray[dtype=np.float32_t, ndim=1] spect
     print("checkpoint 3...")
 
 	# from population calculation to calculating the line set
+
+    print("host_params_h_v0_d = ", len(host_params_h_v0_d))
+    print(host_params_h_v0_d)
+
+    print("host_params_h_da_d = ", len(host_params_h_da_d))
+    print(host_params_h_da_d)
+
+    print("host_params_h_S0_d = ", len(host_params_h_S0_d))
+    print(host_params_h_S0_d)
+
+    print("host_params_h_El_d = ", len(host_params_h_El_d))
+    print(host_params_h_El_d)
+
+    print("host_params_h_log_2gs_d = ", len(host_params_h_log_2gs_d))
+    print(host_params_h_log_2gs_d)
+
+    print("host_params_h_na_d = ", len(host_params_h_na_d))
+    print(host_params_h_na_d)
+
+    print("host_params_h_log_2vMm_d = ", len(host_params_h_log_2vMm_d))
+    print(host_params_h_log_2vMm_d)
+    
     fillDLM ((n_blocks,), (init_params_h.N_threads_per_block,), #host_params_h_shared_size 
         (
 		host_params_h_v0_d,
