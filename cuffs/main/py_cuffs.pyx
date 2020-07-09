@@ -140,20 +140,20 @@ class iterData(ctypes.Structure):
         ("blocks", blockData * 4096)
     ]
 
-class spectralData(ctypes.Structure):
-    _fields_=[
-        ("v0", ctypes.POINTER(ctypes.c_float)),
-        ("da", ctypes.POINTER(ctypes.c_float)),
-        ("S0", ctypes.POINTER(ctypes.c_float)),
-        ("El", ctypes.POINTER(ctypes.c_float)),
-        ("log_2vMm", ctypes.POINTER(ctypes.c_float)),
-        ("na", ctypes.POINTER(ctypes.c_float)),
-        ("log_2gs", ctypes.POINTER(ctypes.c_float))
-    ]
+# class spectralData(ctypes.Structure):
+#     _fields_=[
+#         ("v0", ctypes.POINTER(ctypes.c_float)),
+#         ("da", ctypes.POINTER(ctypes.c_float)),
+#         ("S0", ctypes.POINTER(ctypes.c_float)),
+#         ("El", ctypes.POINTER(ctypes.c_float)),
+#         ("log_2vMm", ctypes.POINTER(ctypes.c_float)),
+#         ("na", ctypes.POINTER(ctypes.c_float)),
+#         ("log_2gs", ctypes.POINTER(ctypes.c_float))
+#     ]
 
 init_params_h = initData()
 iter_params_h = iterData()
-spec_h = spectralData()
+#spec_h = spectralData()
 
 # DLM spectral parameters
 # cdef float init_params_h_v_min
@@ -185,24 +185,6 @@ spec_h = spectralData()
 #       iterData: iter_params_h          #
 #-----------------------------------------
 
-# # pressure and temperature
-# cdef float iter_params_h_p
-# cdef float iter_params_h_log_p
-# cdef float iter_params_h_hlog_T
-# cdef float iter_params_h_log_rT
-# cdef float iter_params_h_c2T
-# cdef float iter_params_h_rQ
-
-# # spectral parameters
-# cdef float iter_params_h_log_wG_min
-# cdef float iter_params_h_log_wL_min
-# cdef float iter_params_h_log_dwG
-# cdef float iter_params_h_log_dwL
-
-# cdef int iter_params_h_blocks_line_offset[4096]
-# cdef int iter_params_h_blocks_iv_offset[4096]
-
-#------------------------------------------
 
 
 #--------------------------------------------
@@ -236,22 +218,6 @@ spec_h = spectralData()
 #    initData: init_params_d       #
 # ----------------------------------
 
-# init_params_d_v_min = None
-# init_params_d_v_max = None
-# init_params_d_dv = None
-# init_params_d_N_v = None
-# init_params_d_N_wG = None
-# init_params_d_N_wL = None
-# init_params_d_N_wG_x_N_wL = None
-# init_params_d_N_total = None
-# init_params_d_Max_lines = None
-# init_params_d_N_lines = None
-# init_params_d_N_points_per_block = None
-# init_params_d_N_threads_per_block = None
-# init_params_d_N_blocks_per_grid = None
-# init_params_d_N_points_per_thread = None
-# init_params_d_Max_iterations_per_thread = None
-# init_params_d_shared_size_floats = None
 
 
 
@@ -284,19 +250,14 @@ cuda_code = r'''
 extern "C"{
 
 struct initData {
-	//DLM spectral parameters:
 	float v_min;
-	float v_max;	//Host only
+	float v_max;
 	float dv;
-
-	// DLM sizes:
 	int N_v;
 	int N_wG;
 	int N_wL;
 	int N_wG_x_N_wL;
 	int N_total;
-
-	//Work parameters :
 	int Max_lines;
 	int N_lines;
 	int N_points_per_block;
@@ -304,35 +265,26 @@ struct initData {
 	int N_blocks_per_grid;
 	int N_points_per_thread;
 	int	Max_iterations_per_thread;
-
 	int shared_size_floats;
 };
 
 struct blockData {
-	//int N_points_per_block;
 	int line_offset;
-	//int N_iterations;
 	int iv_offset;
 };
 
 struct iterData {
-	//Pressure & temperature:
 	float p;
-	//float T;
 	float log_p;
 	float hlog_T;
 	float log_rT;
 	float c2T;
 	float rQ;
-
-	//Spectral parameters:
 	float log_wG_min;
 	float log_wL_min;
 	float log_dwG;
 	float log_dwL;
-
-	//Block data:
-	blockData blocks[4096];//4096
+	blockData blocks[4096];
 };
 
 __device__ __constant__ initData init_params_d;
@@ -359,9 +311,9 @@ __global__ void fillDLM(
 	int NwGxNwL = init_params_d.N_wG_x_N_wL;
 
 	////Allocate and zero the Shared memory
-	extern __shared__ float shared_DLM[];
+	//extern __shared__ float shared_DLM[];
 
-	float* DLM = global_DLM;
+	//float* DLM = global_DLM;
 
 	for (int n = 0; n < N_iterations; n++) { // eliminate for-loop
 
@@ -408,14 +360,14 @@ __global__ void fillDLM(
 				float Iv0 = I_add * (1 - av);
 				float Iv1 = I_add * av;
 
-				atomicAdd(&DLM[iwG0 + iwL0 * NwG + iv0 * NwGxNwL], aV00 * Iv0);
-				atomicAdd(&DLM[iwG0 + iwL0 * NwG + iv1 * NwGxNwL], aV00 * Iv1);
-				atomicAdd(&DLM[iwG0 + iwL1 * NwG + iv0 * NwGxNwL], aV01 * Iv0);
-				atomicAdd(&DLM[iwG0 + iwL1 * NwG + iv1 * NwGxNwL], aV01 * Iv1); 
-				atomicAdd(&DLM[iwG1 + iwL0 * NwG + iv0 * NwGxNwL], aV10 * Iv0);
-				atomicAdd(&DLM[iwG1 + iwL0 * NwG + iv1 * NwGxNwL], aV10 * Iv1);
-				atomicAdd(&DLM[iwG1 + iwL1 * NwG + iv0 * NwGxNwL], aV11 * Iv0);
-				atomicAdd(&DLM[iwG1 + iwL1 * NwG + iv1 * NwGxNwL], aV11 * Iv1);
+				atomicAdd(&global_DLM[iwG0 + iwL0 * NwG + iv0 * NwGxNwL], aV00 * Iv0);
+				atomicAdd(&global_DLM[iwG0 + iwL0 * NwG + iv1 * NwGxNwL], aV00 * Iv1);
+				atomicAdd(&global_DLM[iwG0 + iwL1 * NwG + iv0 * NwGxNwL], aV01 * Iv0);
+				atomicAdd(&global_DLM[iwG0 + iwL1 * NwG + iv1 * NwGxNwL], aV01 * Iv1); 
+				atomicAdd(&global_DLM[iwG1 + iwL0 * NwG + iv0 * NwGxNwL], aV10 * Iv0);
+				atomicAdd(&global_DLM[iwG1 + iwL0 * NwG + iv1 * NwGxNwL], aV10 * Iv1);
+				atomicAdd(&global_DLM[iwG1 + iwL1 * NwG + iv0 * NwGxNwL], aV11 * Iv0);
+				atomicAdd(&global_DLM[iwG1 + iwL1 * NwG + iv1 * NwGxNwL], aV11 * Iv1);
 			}
 		}
 	} 
@@ -872,25 +824,6 @@ cdef void iterate(float p, float T, vector[float] spectrum_h):
     global host_params_h_stop
     global host_params_h_elapsedTime
 
-    global init_params_d_v_min
-    global init_params_d_v_max
-    global init_params_d_dv
-    global init_params_d_N_v
-    global init_params_d_N_wG
-    global init_params_d_N_wL
-    global init_params_d_N_wG_x_N_wL
-    global init_params_d_N_total
-    global init_params_d_Max_lines
-    global init_params_d_N_lines
-    global init_params_d_N_points_per_block
-    global init_params_d_N_threads_per_block
-    global init_params_d_N_blocks_per_grid
-    global init_params_d_N_points_per_thread
-    global init_params_d_Max_iterations_per_thread
-    global init_params_d_shared_size_floats
-
-   
-
     global cuda_module
     #------------------------------------------------------
 
@@ -1018,6 +951,10 @@ cdef void iterate(float p, float T, vector[float] spectrum_h):
     cp.cuda.runtime.deviceSynchronize()
     print('checkpoint 5...')
 
+    print("printing host_params_h_DLM_d_in: ")
+    print(host_params_h_DLM_d_in)
+    exit()
+
 	# FFT
     # figure out how host_params_h_DLM_d_in points to the same memory location as host_params_h_DLM_d
     host_params_h_DLM_d_out = cp.fft.rfftn(host_params_h_DLM_d_in) #cufftExecR2C(host_params_h_plan_DLM, host_params_h_DLM_d_in, host_params_h_DLM_d_out)
@@ -1071,25 +1008,7 @@ cdef void iterate(float p, float T, vector[float] spectrum_h):
 def start():
 
     # ----------- setup global variables -----------------
-    global init_params_h, spec_h
-
-    global init_params_d_v_min
-    global init_params_d_v_max
-    global init_params_d_dv
-    global init_params_d_N_v
-    global init_params_d_N_wG
-    global init_params_d_N_wL
-    global init_params_d_N_wG_x_N_wL
-    global init_params_d_N_total
-    global init_params_d_Max_lines
-    global init_params_d_N_lines
-    global init_params_d_N_points_per_block
-    global init_params_d_N_threads_per_block
-    global init_params_d_N_blocks_per_grid
-    global init_params_d_N_points_per_thread
-    global init_params_d_Max_iterations_per_thread
-    global init_params_d_shared_size_floats
-
+    global init_params_h
     global host_params_h_v0_dec
     global host_params_h_da_dec
     global host_params_h_dec_size
@@ -1121,6 +1040,14 @@ def start():
 
     cdef vector[float] spectrum_h
     cdef vector[float] v_arr
+
+    cdef  vector[float] spec_h_v0
+    cdef  vector[float] spec_h_da
+    cdef  vector[float] spec_h_S0
+    cdef  vector[float] spec_h_El
+    cdef  vector[float] spec_h_log_2vMm
+    cdef  vector[float] spec_h_na
+    cdef  vector[float] spec_h_log_2gs
 
     init_params_h.v_min = 1750.0
     init_params_h.v_max = 1850.0
@@ -1165,14 +1092,14 @@ def start():
     print("Loading v0.npy...")
     v0 = np.load(dir_path+'v0.npy')
     print("Done!")
-    spec_h.v0 = (ctypes.c_float * len(v0))(*v0)
+    spec_h_v0 = (ctypes.c_float * len(v0))(*v0)
     
     #read_npy(dir_path+'da.npy', da)
 
     print("Loading da.npy...")
     da = np.load(dir_path+'da.npy')
     print("Done!")
-    spec_h.da = (ctypes.c_float * len(da))(*da)
+    spec_h_da = (ctypes.c_float * len(da))(*da)
 
     host_params_h_v0_dec = np.minimum.reduceat(v0, np.arange(0, len(v0), init_params_h.N_threads_per_block))     #decimate (v0, v0_dec, init_params_h_N_threads_per_block)
     host_params_h_dec_size = host_params_h_v0_dec.size()
@@ -1185,12 +1112,12 @@ def start():
     print("Loading log_2gs.npy...")
     log_2gs = np.load(dir_path+'log_2gs.npy')
     print("Done!")
-    spec_h.log_2gs = (ctypes.c_float * len(log_2gs))(*log_2gs)
+    spec_h_log_2gs = (ctypes.c_float * len(log_2gs))(*log_2gs)
     #read_npy(dir_path + 'na.npy', na)
     print("Loading na.npy...")
     na = np.load(dir_path+'na.npy')
     print("Done!")
-    spec_h.na = (ctypes.c_float * len(na))(*na)
+    spec_h_na = (ctypes.c_float * len(na))(*na)
     init_lorentzian_params(log_2gs, na)
     print()
 
@@ -1200,7 +1127,7 @@ def start():
     print("Loading log_2vMm.npy...")
     log_2vMm = np.load(dir_path+'log_2vMm.npy')
     print("Done!")
-    spec_h.log_2vMm = (ctypes.c_float * len(log_2vMm))(*log_2vMm)
+    spec_h_log_2vMm = (ctypes.c_float * len(log_2vMm))(*log_2vMm)
     init_gaussian_params(log_2vMm)
     print()
 
@@ -1210,12 +1137,12 @@ def start():
     print("Loading S0.npy...")
     S0 = np.load(dir_path+'S0.npy')
     print("Done!")
-    spec_h.S0 = (ctypes.c_float * len(S0))(*S0)
+    spec_h_S0 = (ctypes.c_float * len(S0))(*S0)
     #read_npy(dir_path + 'El.npy', El)
     print("Loading El.npy...")
     El = np.load(dir_path+'El.npy')
     print("Done!")
-    spec_h.El = (ctypes.c_float * len(El))(*El)
+    spec_h_El = (ctypes.c_float * len(El))(*El)
     print()
 
     init_params_h.N_lines = int(len(v0))
@@ -1314,19 +1241,20 @@ def start():
     memptr_init_params_d = cuda_module.get_global("init_params_d")
 
     init_params_ptr = ctypes.cast(ctypes.pointer(init_params_h),ctypes.c_void_p)
-    struct_size = ctypes.sizeof(init_params_h)
-    print('sizeof p:', struct_size)
+    init_params_size = ctypes.sizeof(init_params_h)
+    print('sizeof p:', init_params_size)
+    memptr_init_params_d.copy_from_host(init_params_ptr, init_params_size)
 
-    memptr_init_params_d.copy_from_host(init_params_ptr,struct_size)
+    print("copied init_params_h data to device")
 
 	# #Copy spectral data to device
-    host_params_h_v0_d =        cp.array(spec_h.v0)
-    host_params_h_da_d =        cp.array(spec_h.da)
-    host_params_h_S0_d =        cp.array(spec_h.S0)
-    host_params_h_El_d =        cp.array(spec_h.El)
-    host_params_h_log_2gs_d =   cp.array(spec_h.log_2gs)
-    host_params_h_na_d =        cp.array(spec_h.na)
-    host_params_h_log_2vMm_d =  cp.array(spec_h.log_2vMm)
+    host_params_h_v0_d =        cp.array(spec_h_v0)
+    host_params_h_da_d =        cp.array(spec_h_da)
+    host_params_h_S0_d =        cp.array(spec_h_S0)
+    host_params_h_El_d =        cp.array(spec_h_El)
+    host_params_h_log_2gs_d =   cp.array(spec_h_log_2gs)
+    host_params_h_na_d =        cp.array(spec_h_na)
+    host_params_h_log_2vMm_d =  cp.array(spec_h_log_2vMm)
     
     print("Done!")
 

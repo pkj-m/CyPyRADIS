@@ -1,3 +1,4 @@
+#distutils: language=c++
 from __future__ import print_function
 import cupy as cp
 import numpy as np
@@ -11,44 +12,38 @@ def gpu_add():
     global array_struct
     # length of array = 16
 
-    dummy_array = np.arange(16, dtype=np.float32)
+    dummy_np_array = np.arange(16, dtype=np.float32)
+    test_array_h = np.zeros(16, dtype=np.float32)
+    test_array = cp.array(test_array_h)
     
-    cdef vector[float] vec
+    # THIS WORKS DO NOT USE 'CDEF VECTOR[FLOAT] DIRECTLY'
+    cdef np.ndarray[dtype=np.float32_t, ndim=1] vec = dummy_np_array
 
-
-    
-    test_arr = cp.zeros(16, dtype=cp.float32)
+    vec_d = cp.array(vec)
 
     print("test array before kernel: ")
     for i in range(16):
-        print(test_arr[i], end = ", ")
+        print(test_array[i], end = ", ")
     print()
-    print("array struct looks as follows: ")
-    print("arr1: ")
+    print("vec looks as follows: ")
     for i in range(16):
-        print(array_struct.arr1[i], end = ", ")
-    print("\narr2: ")
+        print(vec[i], end = ", ")
+    print()
+    print("vec_d looks as follows: ")
     for i in range(16):
-        print(array_struct.arr2[i], end = ", ")
+        vec_d[i] = 10*i
+        print(vec_d[i], end = ", ")
     print()
 
     print("\n KERNEL LAUNCHED \n")
-    
+    cnt = cp.int32(0)
+
     cuda_code = r'''
-    #include<cupy/complex.cuh>
     extern "C"{
         
-        struct arrayStruct{
-            float *arr1;
-            float *arr2;
-        };
-        
-        __device__ __constant__ arrayStruct array_struct;
-
-        __global__ void my_add(float* dummy, int N) {
-            int tid = blockDim.x * blockIdx.x + threadIdx.x;
-            if (tid < N){
-                dummy[tid] = array_struct.arr1[tid] + array_struct.arr2[tid];
+        __global__ void my_add(float* dummy, float *vec_d, int N) {
+            for (int i = 0; i < N; i++){
+                dummy[i] = vec_d[i];
             }
         }
     }
@@ -57,19 +52,12 @@ def gpu_add():
     module = cp.RawModule(code = cuda_code)
     add_kernel = module.get_function('my_add')
 
-    memptr = module.get_global("array_struct")
-    struct_ptr = ctypes.cast(ctypes.pointer(array_struct),ctypes.c_void_p)
-    struct_size = ctypes.sizeof(array_struct)
-    print('sizeof p:', struct_size)
-    memptr.copy_from_host(struct_ptr,struct_size)
-    print('Done!')
-
-    add_kernel((4,), (4,), (test_arr, 16))
-    
+    add_kernel((1,), (1,), (test_array, vec_d, 16))
+    test_array_h = test_array.get()
     print("array after kernel: ")
     
     for i in range(16):
-        print(test_arr[i], end = ", ")
+        print(test_array_h[i], end = ", ")
     print()
 
     return
