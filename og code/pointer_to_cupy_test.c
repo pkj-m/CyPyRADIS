@@ -1704,7 +1704,7 @@ static const char __pyx_k_pointer_to_cupy_test_pyx[] = "pointer_to_cupy_test.pyx
 static const char __pyx_k_test_array_before_kernel[] = "test array before kernel: ";
 static const char __pyx_k_ndarray_is_not_C_contiguous[] = "ndarray is not C contiguous";
 static const char __pyx_k_array_struct_looks_as_follows[] = "array struct looks as follows: ";
-static const char __pyx_k_include_cupy_complex_cuh_extern[] = "\n    #include<cupy/complex.cuh>\n    extern \"C\"{\n        \n        struct arrayStruct{\n            float *arr1;\n            float *arr2;\n        };\n        \n        __device__ __constant__ arrayStruct array_struct;\n\n        __global__ void my_add(float* dummy, int N) {\n            int tid = blockDim.x * blockIdx.x + threadIdx.x;\n            if (tid < N){\n                dummy[tid] = array_struct.arr1[tid] + array_struct.arr2[tid];\n            }\n        }\n    }\n    ";
+static const char __pyx_k_include_cupy_complex_cuh_extern[] = "\n    #include<cupy/complex.cuh>\n    extern \"C\"{\n        \n        __global__ void my_add(float* dummy, float *arr1, float *arr2, int N) {\n            int tid = blockDim.x * blockIdx.x + threadIdx.x;\n            if (tid < N){\n                dummy[tid] = arr1[tid] + arr2[tid];\n            }\n        }\n    }\n    ";
 static const char __pyx_k_numpy_core_multiarray_failed_to[] = "numpy.core.multiarray failed to import";
 static const char __pyx_k_unknown_dtype_code_in_numpy_pxd[] = "unknown dtype code in numpy.pxd (%d)";
 static const char __pyx_k_Format_string_allocated_too_shor[] = "Format string allocated too short, see comment in numpy.pxd";
@@ -1844,8 +1844,8 @@ static PyObject *__pyx_pw_20pointer_to_cupy_test_1gpu_add(PyObject *__pyx_self, 
 static PyObject *__pyx_pf_20pointer_to_cupy_test_gpu_add(CYTHON_UNUSED PyObject *__pyx_self) {
   PyObject *__pyx_v_dummy_array = NULL;
   PyObject *__pyx_v_dummy_array2 = NULL;
-  CYTHON_UNUSED PyObject *__pyx_v_arr1_d = NULL;
-  CYTHON_UNUSED PyObject *__pyx_v_arr2_d = NULL;
+  PyObject *__pyx_v_arr1_d = NULL;
+  PyObject *__pyx_v_arr2_d = NULL;
   PyObject *__pyx_v_test_arr = NULL;
   long __pyx_v_i;
   PyObject *__pyx_v_cuda_code = NULL;
@@ -2286,36 +2286,36 @@ static PyObject *__pyx_pf_20pointer_to_cupy_test_gpu_add(CYTHON_UNUSED PyObject 
   __Pyx_INCREF(__pyx_kp_s_include_cupy_complex_cuh_extern);
   __pyx_v_cuda_code = __pyx_kp_s_include_cupy_complex_cuh_extern;
 
-  /* "pointer_to_cupy_test.pyx":72
+  /* "pointer_to_cupy_test.pyx":65
  *     '''
  * 
  *     module = cp.RawModule(code = cuda_code)             # <<<<<<<<<<<<<<
  *     add_kernel = module.get_function('my_add')
  * 
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_cp); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 72, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_cp); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 65, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_RawModule); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 72, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_RawModule); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 65, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  __pyx_t_1 = __Pyx_PyDict_NewPresized(1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 72, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyDict_NewPresized(1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 65, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  if (PyDict_SetItem(__pyx_t_1, __pyx_n_s_code, __pyx_v_cuda_code) < 0) __PYX_ERR(0, 72, __pyx_L1_error)
-  __pyx_t_2 = __Pyx_PyObject_Call(__pyx_t_3, __pyx_empty_tuple, __pyx_t_1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 72, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_1, __pyx_n_s_code, __pyx_v_cuda_code) < 0) __PYX_ERR(0, 65, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_Call(__pyx_t_3, __pyx_empty_tuple, __pyx_t_1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 65, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_v_module = __pyx_t_2;
   __pyx_t_2 = 0;
 
-  /* "pointer_to_cupy_test.pyx":73
+  /* "pointer_to_cupy_test.pyx":66
  * 
  *     module = cp.RawModule(code = cuda_code)
  *     add_kernel = module.get_function('my_add')             # <<<<<<<<<<<<<<
  * 
  *     memptr = module.get_global("array_struct")
  */
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_module, __pyx_n_s_get_function); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 73, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_module, __pyx_n_s_get_function); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 66, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_t_3 = NULL;
   if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_1))) {
@@ -2329,20 +2329,20 @@ static PyObject *__pyx_pf_20pointer_to_cupy_test_gpu_add(CYTHON_UNUSED PyObject 
   }
   __pyx_t_2 = (__pyx_t_3) ? __Pyx_PyObject_Call2Args(__pyx_t_1, __pyx_t_3, __pyx_n_s_my_add) : __Pyx_PyObject_CallOneArg(__pyx_t_1, __pyx_n_s_my_add);
   __Pyx_XDECREF(__pyx_t_3); __pyx_t_3 = 0;
-  if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 73, __pyx_L1_error)
+  if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 66, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_v_add_kernel = __pyx_t_2;
   __pyx_t_2 = 0;
 
-  /* "pointer_to_cupy_test.pyx":75
+  /* "pointer_to_cupy_test.pyx":68
  *     add_kernel = module.get_function('my_add')
  * 
  *     memptr = module.get_global("array_struct")             # <<<<<<<<<<<<<<
  *     struct_ptr = ctypes.cast(ctypes.pointer(array_struct),ctypes.c_void_p)
  *     struct_size = ctypes.sizeof(array_struct)
  */
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_module, __pyx_n_s_get_global); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 75, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_module, __pyx_n_s_get_global); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 68, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_t_3 = NULL;
   if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_1))) {
@@ -2356,30 +2356,30 @@ static PyObject *__pyx_pf_20pointer_to_cupy_test_gpu_add(CYTHON_UNUSED PyObject 
   }
   __pyx_t_2 = (__pyx_t_3) ? __Pyx_PyObject_Call2Args(__pyx_t_1, __pyx_t_3, __pyx_n_s_array_struct) : __Pyx_PyObject_CallOneArg(__pyx_t_1, __pyx_n_s_array_struct);
   __Pyx_XDECREF(__pyx_t_3); __pyx_t_3 = 0;
-  if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 75, __pyx_L1_error)
+  if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 68, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_v_memptr = __pyx_t_2;
   __pyx_t_2 = 0;
 
-  /* "pointer_to_cupy_test.pyx":76
+  /* "pointer_to_cupy_test.pyx":69
  * 
  *     memptr = module.get_global("array_struct")
  *     struct_ptr = ctypes.cast(ctypes.pointer(array_struct),ctypes.c_void_p)             # <<<<<<<<<<<<<<
  *     struct_size = ctypes.sizeof(array_struct)
  *     print('sizeof p:', struct_size)
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_ctypes); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 76, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_ctypes); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 69, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_cast); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 76, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_cast); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 69, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  __Pyx_GetModuleGlobalName(__pyx_t_4, __pyx_n_s_ctypes); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 76, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_4, __pyx_n_s_ctypes); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 69, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
-  __pyx_t_7 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_pointer); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 76, __pyx_L1_error)
+  __pyx_t_7 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_pointer); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 69, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_7);
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-  __Pyx_GetModuleGlobalName(__pyx_t_4, __pyx_n_s_array_struct); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 76, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_4, __pyx_n_s_array_struct); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 69, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
   __pyx_t_8 = NULL;
   if (CYTHON_UNPACK_METHODS && unlikely(PyMethod_Check(__pyx_t_7))) {
@@ -2394,12 +2394,12 @@ static PyObject *__pyx_pf_20pointer_to_cupy_test_gpu_add(CYTHON_UNUSED PyObject 
   __pyx_t_1 = (__pyx_t_8) ? __Pyx_PyObject_Call2Args(__pyx_t_7, __pyx_t_8, __pyx_t_4) : __Pyx_PyObject_CallOneArg(__pyx_t_7, __pyx_t_4);
   __Pyx_XDECREF(__pyx_t_8); __pyx_t_8 = 0;
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-  if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 76, __pyx_L1_error)
+  if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 69, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
-  __Pyx_GetModuleGlobalName(__pyx_t_7, __pyx_n_s_ctypes); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 76, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_7, __pyx_n_s_ctypes); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 69, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_7);
-  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_t_7, __pyx_n_s_c_void_p); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 76, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_t_7, __pyx_n_s_c_void_p); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 69, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
   __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
   __pyx_t_7 = NULL;
@@ -2417,7 +2417,7 @@ static PyObject *__pyx_pf_20pointer_to_cupy_test_gpu_add(CYTHON_UNUSED PyObject 
   #if CYTHON_FAST_PYCALL
   if (PyFunction_Check(__pyx_t_3)) {
     PyObject *__pyx_temp[3] = {__pyx_t_7, __pyx_t_1, __pyx_t_4};
-    __pyx_t_2 = __Pyx_PyFunction_FastCall(__pyx_t_3, __pyx_temp+1-__pyx_t_9, 2+__pyx_t_9); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 76, __pyx_L1_error)
+    __pyx_t_2 = __Pyx_PyFunction_FastCall(__pyx_t_3, __pyx_temp+1-__pyx_t_9, 2+__pyx_t_9); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 69, __pyx_L1_error)
     __Pyx_XDECREF(__pyx_t_7); __pyx_t_7 = 0;
     __Pyx_GOTREF(__pyx_t_2);
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
@@ -2427,7 +2427,7 @@ static PyObject *__pyx_pf_20pointer_to_cupy_test_gpu_add(CYTHON_UNUSED PyObject 
   #if CYTHON_FAST_PYCCALL
   if (__Pyx_PyFastCFunction_Check(__pyx_t_3)) {
     PyObject *__pyx_temp[3] = {__pyx_t_7, __pyx_t_1, __pyx_t_4};
-    __pyx_t_2 = __Pyx_PyCFunction_FastCall(__pyx_t_3, __pyx_temp+1-__pyx_t_9, 2+__pyx_t_9); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 76, __pyx_L1_error)
+    __pyx_t_2 = __Pyx_PyCFunction_FastCall(__pyx_t_3, __pyx_temp+1-__pyx_t_9, 2+__pyx_t_9); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 69, __pyx_L1_error)
     __Pyx_XDECREF(__pyx_t_7); __pyx_t_7 = 0;
     __Pyx_GOTREF(__pyx_t_2);
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
@@ -2435,7 +2435,7 @@ static PyObject *__pyx_pf_20pointer_to_cupy_test_gpu_add(CYTHON_UNUSED PyObject 
   } else
   #endif
   {
-    __pyx_t_8 = PyTuple_New(2+__pyx_t_9); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 76, __pyx_L1_error)
+    __pyx_t_8 = PyTuple_New(2+__pyx_t_9); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 69, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_8);
     if (__pyx_t_7) {
       __Pyx_GIVEREF(__pyx_t_7); PyTuple_SET_ITEM(__pyx_t_8, 0, __pyx_t_7); __pyx_t_7 = NULL;
@@ -2446,7 +2446,7 @@ static PyObject *__pyx_pf_20pointer_to_cupy_test_gpu_add(CYTHON_UNUSED PyObject 
     PyTuple_SET_ITEM(__pyx_t_8, 1+__pyx_t_9, __pyx_t_4);
     __pyx_t_1 = 0;
     __pyx_t_4 = 0;
-    __pyx_t_2 = __Pyx_PyObject_Call(__pyx_t_3, __pyx_t_8, NULL); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 76, __pyx_L1_error)
+    __pyx_t_2 = __Pyx_PyObject_Call(__pyx_t_3, __pyx_t_8, NULL); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 69, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
     __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
   }
@@ -2454,19 +2454,19 @@ static PyObject *__pyx_pf_20pointer_to_cupy_test_gpu_add(CYTHON_UNUSED PyObject 
   __pyx_v_struct_ptr = __pyx_t_2;
   __pyx_t_2 = 0;
 
-  /* "pointer_to_cupy_test.pyx":77
+  /* "pointer_to_cupy_test.pyx":70
  *     memptr = module.get_global("array_struct")
  *     struct_ptr = ctypes.cast(ctypes.pointer(array_struct),ctypes.c_void_p)
  *     struct_size = ctypes.sizeof(array_struct)             # <<<<<<<<<<<<<<
  *     print('sizeof p:', struct_size)
  *     memptr.copy_from_host(struct_ptr,struct_size)
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_3, __pyx_n_s_ctypes); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 77, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_3, __pyx_n_s_ctypes); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 70, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
-  __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_t_3, __pyx_n_s_sizeof); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 77, __pyx_L1_error)
+  __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_t_3, __pyx_n_s_sizeof); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 70, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-  __Pyx_GetModuleGlobalName(__pyx_t_3, __pyx_n_s_array_struct); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 77, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_3, __pyx_n_s_array_struct); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 70, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __pyx_t_4 = NULL;
   if (CYTHON_UNPACK_METHODS && unlikely(PyMethod_Check(__pyx_t_8))) {
@@ -2481,20 +2481,20 @@ static PyObject *__pyx_pf_20pointer_to_cupy_test_gpu_add(CYTHON_UNUSED PyObject 
   __pyx_t_2 = (__pyx_t_4) ? __Pyx_PyObject_Call2Args(__pyx_t_8, __pyx_t_4, __pyx_t_3) : __Pyx_PyObject_CallOneArg(__pyx_t_8, __pyx_t_3);
   __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-  if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 77, __pyx_L1_error)
+  if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 70, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
   __pyx_v_struct_size = __pyx_t_2;
   __pyx_t_2 = 0;
 
-  /* "pointer_to_cupy_test.pyx":78
+  /* "pointer_to_cupy_test.pyx":71
  *     struct_ptr = ctypes.cast(ctypes.pointer(array_struct),ctypes.c_void_p)
  *     struct_size = ctypes.sizeof(array_struct)
  *     print('sizeof p:', struct_size)             # <<<<<<<<<<<<<<
  *     memptr.copy_from_host(struct_ptr,struct_size)
  *     print('Done!')
  */
-  __pyx_t_2 = PyTuple_New(2); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 78, __pyx_L1_error)
+  __pyx_t_2 = PyTuple_New(2); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 71, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_INCREF(__pyx_kp_s_sizeof_p);
   __Pyx_GIVEREF(__pyx_kp_s_sizeof_p);
@@ -2502,19 +2502,19 @@ static PyObject *__pyx_pf_20pointer_to_cupy_test_gpu_add(CYTHON_UNUSED PyObject 
   __Pyx_INCREF(__pyx_v_struct_size);
   __Pyx_GIVEREF(__pyx_v_struct_size);
   PyTuple_SET_ITEM(__pyx_t_2, 1, __pyx_v_struct_size);
-  __pyx_t_8 = __Pyx_PyObject_Call(__pyx_builtin_print, __pyx_t_2, NULL); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 78, __pyx_L1_error)
+  __pyx_t_8 = __Pyx_PyObject_Call(__pyx_builtin_print, __pyx_t_2, NULL); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 71, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
 
-  /* "pointer_to_cupy_test.pyx":79
+  /* "pointer_to_cupy_test.pyx":72
  *     struct_size = ctypes.sizeof(array_struct)
  *     print('sizeof p:', struct_size)
  *     memptr.copy_from_host(struct_ptr,struct_size)             # <<<<<<<<<<<<<<
  *     print('Done!')
  * 
  */
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_memptr, __pyx_n_s_copy_from_host); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 79, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_memptr, __pyx_n_s_copy_from_host); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 72, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __pyx_t_3 = NULL;
   __pyx_t_9 = 0;
@@ -2531,7 +2531,7 @@ static PyObject *__pyx_pf_20pointer_to_cupy_test_gpu_add(CYTHON_UNUSED PyObject 
   #if CYTHON_FAST_PYCALL
   if (PyFunction_Check(__pyx_t_2)) {
     PyObject *__pyx_temp[3] = {__pyx_t_3, __pyx_v_struct_ptr, __pyx_v_struct_size};
-    __pyx_t_8 = __Pyx_PyFunction_FastCall(__pyx_t_2, __pyx_temp+1-__pyx_t_9, 2+__pyx_t_9); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 79, __pyx_L1_error)
+    __pyx_t_8 = __Pyx_PyFunction_FastCall(__pyx_t_2, __pyx_temp+1-__pyx_t_9, 2+__pyx_t_9); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 72, __pyx_L1_error)
     __Pyx_XDECREF(__pyx_t_3); __pyx_t_3 = 0;
     __Pyx_GOTREF(__pyx_t_8);
   } else
@@ -2539,13 +2539,13 @@ static PyObject *__pyx_pf_20pointer_to_cupy_test_gpu_add(CYTHON_UNUSED PyObject 
   #if CYTHON_FAST_PYCCALL
   if (__Pyx_PyFastCFunction_Check(__pyx_t_2)) {
     PyObject *__pyx_temp[3] = {__pyx_t_3, __pyx_v_struct_ptr, __pyx_v_struct_size};
-    __pyx_t_8 = __Pyx_PyCFunction_FastCall(__pyx_t_2, __pyx_temp+1-__pyx_t_9, 2+__pyx_t_9); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 79, __pyx_L1_error)
+    __pyx_t_8 = __Pyx_PyCFunction_FastCall(__pyx_t_2, __pyx_temp+1-__pyx_t_9, 2+__pyx_t_9); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 72, __pyx_L1_error)
     __Pyx_XDECREF(__pyx_t_3); __pyx_t_3 = 0;
     __Pyx_GOTREF(__pyx_t_8);
   } else
   #endif
   {
-    __pyx_t_4 = PyTuple_New(2+__pyx_t_9); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 79, __pyx_L1_error)
+    __pyx_t_4 = PyTuple_New(2+__pyx_t_9); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 72, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
     if (__pyx_t_3) {
       __Pyx_GIVEREF(__pyx_t_3); PyTuple_SET_ITEM(__pyx_t_4, 0, __pyx_t_3); __pyx_t_3 = NULL;
@@ -2556,39 +2556,45 @@ static PyObject *__pyx_pf_20pointer_to_cupy_test_gpu_add(CYTHON_UNUSED PyObject 
     __Pyx_INCREF(__pyx_v_struct_size);
     __Pyx_GIVEREF(__pyx_v_struct_size);
     PyTuple_SET_ITEM(__pyx_t_4, 1+__pyx_t_9, __pyx_v_struct_size);
-    __pyx_t_8 = __Pyx_PyObject_Call(__pyx_t_2, __pyx_t_4, NULL); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 79, __pyx_L1_error)
+    __pyx_t_8 = __Pyx_PyObject_Call(__pyx_t_2, __pyx_t_4, NULL); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 72, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_8);
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
   }
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
 
-  /* "pointer_to_cupy_test.pyx":80
+  /* "pointer_to_cupy_test.pyx":73
  *     print('sizeof p:', struct_size)
  *     memptr.copy_from_host(struct_ptr,struct_size)
  *     print('Done!')             # <<<<<<<<<<<<<<
  * 
- *     add_kernel((4,), (4,), (test_arr, 16))
+ *     add_kernel((4,), (4,), (test_arr, arr1_d, arr2_d, 16))
  */
-  __pyx_t_8 = __Pyx_PyObject_Call(__pyx_builtin_print, __pyx_tuple__8, NULL); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 80, __pyx_L1_error)
+  __pyx_t_8 = __Pyx_PyObject_Call(__pyx_builtin_print, __pyx_tuple__8, NULL); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 73, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
   __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
 
-  /* "pointer_to_cupy_test.pyx":82
+  /* "pointer_to_cupy_test.pyx":75
  *     print('Done!')
  * 
- *     add_kernel((4,), (4,), (test_arr, 16))             # <<<<<<<<<<<<<<
+ *     add_kernel((4,), (4,), (test_arr, arr1_d, arr2_d, 16))             # <<<<<<<<<<<<<<
  * 
  *     print("array after kernel: ")
  */
-  __pyx_t_2 = PyTuple_New(2); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 82, __pyx_L1_error)
+  __pyx_t_2 = PyTuple_New(4); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 75, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_INCREF(__pyx_v_test_arr);
   __Pyx_GIVEREF(__pyx_v_test_arr);
   PyTuple_SET_ITEM(__pyx_t_2, 0, __pyx_v_test_arr);
+  __Pyx_INCREF(__pyx_v_arr1_d);
+  __Pyx_GIVEREF(__pyx_v_arr1_d);
+  PyTuple_SET_ITEM(__pyx_t_2, 1, __pyx_v_arr1_d);
+  __Pyx_INCREF(__pyx_v_arr2_d);
+  __Pyx_GIVEREF(__pyx_v_arr2_d);
+  PyTuple_SET_ITEM(__pyx_t_2, 2, __pyx_v_arr2_d);
   __Pyx_INCREF(__pyx_int_16);
   __Pyx_GIVEREF(__pyx_int_16);
-  PyTuple_SET_ITEM(__pyx_t_2, 1, __pyx_int_16);
+  PyTuple_SET_ITEM(__pyx_t_2, 3, __pyx_int_16);
   __Pyx_INCREF(__pyx_v_add_kernel);
   __pyx_t_4 = __pyx_v_add_kernel; __pyx_t_3 = NULL;
   __pyx_t_9 = 0;
@@ -2605,7 +2611,7 @@ static PyObject *__pyx_pf_20pointer_to_cupy_test_gpu_add(CYTHON_UNUSED PyObject 
   #if CYTHON_FAST_PYCALL
   if (PyFunction_Check(__pyx_t_4)) {
     PyObject *__pyx_temp[4] = {__pyx_t_3, __pyx_tuple__9, __pyx_tuple__9, __pyx_t_2};
-    __pyx_t_8 = __Pyx_PyFunction_FastCall(__pyx_t_4, __pyx_temp+1-__pyx_t_9, 3+__pyx_t_9); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 82, __pyx_L1_error)
+    __pyx_t_8 = __Pyx_PyFunction_FastCall(__pyx_t_4, __pyx_temp+1-__pyx_t_9, 3+__pyx_t_9); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 75, __pyx_L1_error)
     __Pyx_XDECREF(__pyx_t_3); __pyx_t_3 = 0;
     __Pyx_GOTREF(__pyx_t_8);
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
@@ -2614,14 +2620,14 @@ static PyObject *__pyx_pf_20pointer_to_cupy_test_gpu_add(CYTHON_UNUSED PyObject 
   #if CYTHON_FAST_PYCCALL
   if (__Pyx_PyFastCFunction_Check(__pyx_t_4)) {
     PyObject *__pyx_temp[4] = {__pyx_t_3, __pyx_tuple__9, __pyx_tuple__9, __pyx_t_2};
-    __pyx_t_8 = __Pyx_PyCFunction_FastCall(__pyx_t_4, __pyx_temp+1-__pyx_t_9, 3+__pyx_t_9); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 82, __pyx_L1_error)
+    __pyx_t_8 = __Pyx_PyCFunction_FastCall(__pyx_t_4, __pyx_temp+1-__pyx_t_9, 3+__pyx_t_9); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 75, __pyx_L1_error)
     __Pyx_XDECREF(__pyx_t_3); __pyx_t_3 = 0;
     __Pyx_GOTREF(__pyx_t_8);
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   } else
   #endif
   {
-    __pyx_t_1 = PyTuple_New(3+__pyx_t_9); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 82, __pyx_L1_error)
+    __pyx_t_1 = PyTuple_New(3+__pyx_t_9); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 75, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
     if (__pyx_t_3) {
       __Pyx_GIVEREF(__pyx_t_3); PyTuple_SET_ITEM(__pyx_t_1, 0, __pyx_t_3); __pyx_t_3 = NULL;
@@ -2635,25 +2641,25 @@ static PyObject *__pyx_pf_20pointer_to_cupy_test_gpu_add(CYTHON_UNUSED PyObject 
     __Pyx_GIVEREF(__pyx_t_2);
     PyTuple_SET_ITEM(__pyx_t_1, 2+__pyx_t_9, __pyx_t_2);
     __pyx_t_2 = 0;
-    __pyx_t_8 = __Pyx_PyObject_Call(__pyx_t_4, __pyx_t_1, NULL); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 82, __pyx_L1_error)
+    __pyx_t_8 = __Pyx_PyObject_Call(__pyx_t_4, __pyx_t_1, NULL); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 75, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_8);
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   }
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
   __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
 
-  /* "pointer_to_cupy_test.pyx":84
- *     add_kernel((4,), (4,), (test_arr, 16))
+  /* "pointer_to_cupy_test.pyx":77
+ *     add_kernel((4,), (4,), (test_arr, arr1_d, arr2_d, 16))
  * 
  *     print("array after kernel: ")             # <<<<<<<<<<<<<<
  * 
  *     for i in range(16):
  */
-  __pyx_t_8 = __Pyx_PyObject_Call(__pyx_builtin_print, __pyx_tuple__10, NULL); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 84, __pyx_L1_error)
+  __pyx_t_8 = __Pyx_PyObject_Call(__pyx_builtin_print, __pyx_tuple__10, NULL); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 77, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
   __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
 
-  /* "pointer_to_cupy_test.pyx":86
+  /* "pointer_to_cupy_test.pyx":79
  *     print("array after kernel: ")
  * 
  *     for i in range(16):             # <<<<<<<<<<<<<<
@@ -2663,42 +2669,42 @@ static PyObject *__pyx_pf_20pointer_to_cupy_test_gpu_add(CYTHON_UNUSED PyObject 
   for (__pyx_t_6 = 0; __pyx_t_6 < 16; __pyx_t_6+=1) {
     __pyx_v_i = __pyx_t_6;
 
-    /* "pointer_to_cupy_test.pyx":87
+    /* "pointer_to_cupy_test.pyx":80
  * 
  *     for i in range(16):
  *         print(test_arr[i], end = ", ")             # <<<<<<<<<<<<<<
  *     print()
  * 
  */
-    __pyx_t_8 = __Pyx_GetItemInt(__pyx_v_test_arr, __pyx_v_i, long, 1, __Pyx_PyInt_From_long, 0, 1, 1); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 87, __pyx_L1_error)
+    __pyx_t_8 = __Pyx_GetItemInt(__pyx_v_test_arr, __pyx_v_i, long, 1, __Pyx_PyInt_From_long, 0, 1, 1); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 80, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_8);
-    __pyx_t_4 = PyTuple_New(1); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 87, __pyx_L1_error)
+    __pyx_t_4 = PyTuple_New(1); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 80, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
     __Pyx_GIVEREF(__pyx_t_8);
     PyTuple_SET_ITEM(__pyx_t_4, 0, __pyx_t_8);
     __pyx_t_8 = 0;
-    __pyx_t_8 = __Pyx_PyDict_NewPresized(1); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 87, __pyx_L1_error)
+    __pyx_t_8 = __Pyx_PyDict_NewPresized(1); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 80, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_8);
-    if (PyDict_SetItem(__pyx_t_8, __pyx_n_s_end, __pyx_kp_s__3) < 0) __PYX_ERR(0, 87, __pyx_L1_error)
-    __pyx_t_1 = __Pyx_PyObject_Call(__pyx_builtin_print, __pyx_t_4, __pyx_t_8); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 87, __pyx_L1_error)
+    if (PyDict_SetItem(__pyx_t_8, __pyx_n_s_end, __pyx_kp_s__3) < 0) __PYX_ERR(0, 80, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyObject_Call(__pyx_builtin_print, __pyx_t_4, __pyx_t_8); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 80, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
     __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   }
 
-  /* "pointer_to_cupy_test.pyx":88
+  /* "pointer_to_cupy_test.pyx":81
  *     for i in range(16):
  *         print(test_arr[i], end = ", ")
  *     print()             # <<<<<<<<<<<<<<
  * 
  *     return
  */
-  __pyx_t_1 = __Pyx_PyObject_CallNoArg(__pyx_builtin_print); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 88, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_CallNoArg(__pyx_builtin_print); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 81, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "pointer_to_cupy_test.pyx":90
+  /* "pointer_to_cupy_test.pyx":83
  *     print()
  * 
  *     return             # <<<<<<<<<<<<<<
@@ -5371,36 +5377,36 @@ static CYTHON_SMALL_CODE int __Pyx_InitCachedConstants(void) {
   __Pyx_GOTREF(__pyx_tuple__7);
   __Pyx_GIVEREF(__pyx_tuple__7);
 
-  /* "pointer_to_cupy_test.pyx":80
+  /* "pointer_to_cupy_test.pyx":73
  *     print('sizeof p:', struct_size)
  *     memptr.copy_from_host(struct_ptr,struct_size)
  *     print('Done!')             # <<<<<<<<<<<<<<
  * 
- *     add_kernel((4,), (4,), (test_arr, 16))
+ *     add_kernel((4,), (4,), (test_arr, arr1_d, arr2_d, 16))
  */
-  __pyx_tuple__8 = PyTuple_Pack(1, __pyx_kp_s_Done); if (unlikely(!__pyx_tuple__8)) __PYX_ERR(0, 80, __pyx_L1_error)
+  __pyx_tuple__8 = PyTuple_Pack(1, __pyx_kp_s_Done); if (unlikely(!__pyx_tuple__8)) __PYX_ERR(0, 73, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__8);
   __Pyx_GIVEREF(__pyx_tuple__8);
 
-  /* "pointer_to_cupy_test.pyx":82
+  /* "pointer_to_cupy_test.pyx":75
  *     print('Done!')
  * 
- *     add_kernel((4,), (4,), (test_arr, 16))             # <<<<<<<<<<<<<<
+ *     add_kernel((4,), (4,), (test_arr, arr1_d, arr2_d, 16))             # <<<<<<<<<<<<<<
  * 
  *     print("array after kernel: ")
  */
-  __pyx_tuple__9 = PyTuple_Pack(1, __pyx_int_4); if (unlikely(!__pyx_tuple__9)) __PYX_ERR(0, 82, __pyx_L1_error)
+  __pyx_tuple__9 = PyTuple_Pack(1, __pyx_int_4); if (unlikely(!__pyx_tuple__9)) __PYX_ERR(0, 75, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__9);
   __Pyx_GIVEREF(__pyx_tuple__9);
 
-  /* "pointer_to_cupy_test.pyx":84
- *     add_kernel((4,), (4,), (test_arr, 16))
+  /* "pointer_to_cupy_test.pyx":77
+ *     add_kernel((4,), (4,), (test_arr, arr1_d, arr2_d, 16))
  * 
  *     print("array after kernel: ")             # <<<<<<<<<<<<<<
  * 
  *     for i in range(16):
  */
-  __pyx_tuple__10 = PyTuple_Pack(1, __pyx_kp_s_array_after_kernel); if (unlikely(!__pyx_tuple__10)) __PYX_ERR(0, 84, __pyx_L1_error)
+  __pyx_tuple__10 = PyTuple_Pack(1, __pyx_kp_s_array_after_kernel); if (unlikely(!__pyx_tuple__10)) __PYX_ERR(0, 77, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__10);
   __Pyx_GIVEREF(__pyx_tuple__10);
 

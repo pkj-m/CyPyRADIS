@@ -53,17 +53,10 @@ def gpu_add():
     #include<cupy/complex.cuh>
     extern "C"{
         
-        struct arrayStruct{
-            float *arr1;
-            float *arr2;
-        };
-        
-        __device__ __constant__ arrayStruct array_struct;
-
-        __global__ void my_add(float* dummy, int N) {
+        __global__ void my_add(float* dummy, float *arr1, float *arr2, int N) {
             int tid = blockDim.x * blockIdx.x + threadIdx.x;
             if (tid < N){
-                dummy[tid] = array_struct.arr1[tid] + array_struct.arr2[tid];
+                dummy[tid] = arr1[tid] + arr2[tid];
             }
         }
     }
@@ -79,7 +72,7 @@ def gpu_add():
     memptr.copy_from_host(struct_ptr,struct_size)
     print('Done!')
 
-    add_kernel((4,), (4,), (test_arr, 16))
+    add_kernel((4,), (4,), (test_arr, arr1_d, arr2_d, 16))
     
     print("array after kernel: ")
     
