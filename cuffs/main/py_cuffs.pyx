@@ -730,6 +730,8 @@ cdef void iterate(float p, float T, np.ndarray[dtype=np.float32_t, ndim=1] spect
     print("checkpoint 0.3...")
     n_blocks = prepare_blocks()
 
+    # TODO: once this works, make sure we move definition of host-params-d to main function and just fill it with 0 here
+
     # print(n_blocks)
     # print()
     # print(host_params_h_start)
@@ -812,7 +814,7 @@ cdef void iterate(float p, float T, np.ndarray[dtype=np.float32_t, ndim=1] spect
 	# Zero DLM:
 
 
-    host_params_h_DLM_d_in = cp.zeros(2 * (init_params_h.N_v + 1) * init_params_h.N_wG_x_N_wL, dtype=cp.float32)
+    host_params_h_DLM_d_in = cp.zeros((2 * init_params_h.N_v, init_params_h.N_wG, init_params_h.N_wL, dtype=cp.float32)
     host_params_h_spectrum_d_in = cp.zeros(2*(init_params_h.N_v + 1), dtype=cp.complex64)
 
     #host_params_h_DLM_d_in.fill(0)  #gpuHandleError(cudaMemset(host_params_h_DLM_d, 0, 2 * (init_params_h_N_v + 1) * init_params_h_N_wG_x_N_wL * sizeof(float)))
@@ -868,10 +870,13 @@ cdef void iterate(float p, float T, np.ndarray[dtype=np.float32_t, ndim=1] spect
     cp.cuda.runtime.deviceSynchronize()
     print('checkpoint 5...')
 
-    print("printing host_params_h_DLM_d_in: ")
+    # print("printing host_params_h_DLM_d_in: ")
     # for i in host_params_h_DLM_d_in:
     #     print(i, end=", ")
-    print(host_params_h_DLM_d_in)
+    #print(host_params_h_DLM_d_in)
+    with open('host_params_h_DLM_h_py.txt', 'w') as f:
+        for item in host_params_h_DLM_d_in:
+            f.write("%s\n" % item)
     
     print("enter 1 to continue, 0 to exit..")
     inp = int(input())
@@ -923,8 +928,11 @@ cdef void iterate(float p, float T, np.ndarray[dtype=np.float32_t, ndim=1] spect
 
 
     print("obtained spectrum_h...")
-    v_arr = np.array([init_params_h.v_min + i * init_params_h.dv for i in range(init_params_h.N_v)])
-    print(spectrum_h)
+    #v_arr = np.array([init_params_h.v_min + i * init_params_h.dv for i in range(init_params_h.N_v)])
+    # with open('spectrum_h_out_py.txt', 'w') as f:
+    #     for item in spectrum_h:
+    #         f.write("%s\n" % item)
+
     plt.plot(spectrum_h)
     plt.show()
 	#cout << "(" << elapsedTime << " ms)" << endl;
