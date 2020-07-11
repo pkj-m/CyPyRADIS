@@ -20,9 +20,6 @@ cdef float epsilon = 0.0001
 cdef float FLOAT_MAX =  1e30
 cdef float FLOAT_MIN = -1e30
 
-#-----------------------------------
-#    hostData: host_params_h       #
-#-----------------------------------
 
 cdef  int host_params_h_block_preparation_step_size
 cdef  int host_params_h_Min_threads_per_block
@@ -60,17 +57,6 @@ cdef  float host_params_h_elapsedTimeDLM
 # not needed in case of CuPy
 #cdef  cufftHandle host_params_h_plan_DLM
 #cdef  cufftHandle host_params_h_plan_spectrum
-
-# device pointers
-# cdef  float* host_params_h_v0_d
-# cdef  float* host_params_h_da_d
-# cdef  float* host_params_h_S0_d
-# cdef  float* host_params_h_El_d
-# cdef  float* host_params_h_log_2gs_d
-# cdef  float* host_params_h_na_d
-# cdef  float* host_params_h_log_2vMm_d
-# cdef  float* host_params_h_DLM_d
-# cdef  float* host_params_h_spectrum_d
 
 host_params_h_v0_d = None
 host_params_h_da_d = None
@@ -135,7 +121,6 @@ class iterData(ctypes.Structure):
 
         ("blocks", blockData * 4096)
     ]
-
 
 
 init_params_h = initData()
@@ -884,6 +869,8 @@ cdef void iterate(float p, float T, np.ndarray[dtype=np.float32_t, ndim=1] spect
     print('checkpoint 5...')
 
     print("printing host_params_h_DLM_d_in: ")
+    # for i in host_params_h_DLM_d_in:
+    #     print(i, end=", ")
     print(host_params_h_DLM_d_in)
     
     print("enter 1 to continue, 0 to exit..")
@@ -1007,7 +994,7 @@ def start():
     host_params_h_shared_size = 0x8000          # Bytes - Size of the shared memory
     host_params_h_Min_threads_per_block = 128   # Ensures a full warp from each of the 4 processors
     host_params_h_Max_threads_per_block = 1024  # Maximum determined by device parameters
-    init_params_h.shared_size_floats = host_params_h_shared_size // sys.getsizeof(float())
+    init_params_h.shared_size_floats = host_params_h_shared_size // 4
 
     init_params_h.N_wG_x_N_wL = init_params_h.N_wG * init_params_h.N_wL
     init_params_h.N_total = init_params_h.N_wG_x_N_wL * init_params_h.N_v
