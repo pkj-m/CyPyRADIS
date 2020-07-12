@@ -814,8 +814,8 @@ cdef void iterate(float p, float T, np.ndarray[dtype=np.float32_t, ndim=1] spect
 	# Zero DLM:
 
 
-    host_params_h_DLM_d_in = cp.zeros((2 * init_params_h.N_v, init_params_h.N_wG, init_params_h.N_wL, dtype=cp.float32)
-    host_params_h_spectrum_d_in = cp.zeros(2*(init_params_h.N_v + 1), dtype=cp.complex64)
+    host_params_h_DLM_d_in = cp.zeros((2 * init_params_h.N_v, init_params_h.N_wG, init_params_h.N_wL), order='F', dtype=cp.float32)
+    host_params_h_spectrum_d_in = cp.zeros(init_params_h.N_v + 1, dtype=cp.complex64)
 
     #host_params_h_DLM_d_in.fill(0)  #gpuHandleError(cudaMemset(host_params_h_DLM_d, 0, 2 * (init_params_h_N_v + 1) * init_params_h_N_wG_x_N_wL * sizeof(float)))
 
@@ -874,9 +874,11 @@ cdef void iterate(float p, float T, np.ndarray[dtype=np.float32_t, ndim=1] spect
     # for i in host_params_h_DLM_d_in:
     #     print(i, end=", ")
     #print(host_params_h_DLM_d_in)
-    with open('host_params_h_DLM_h_py.txt', 'w') as f:
+    with open('host_params_h_DLM_h_py3.txt', 'w') as f:
         for item in host_params_h_DLM_d_in:
-            f.write("%s\n" % item)
+            for itemx in item:
+                for itemy in itemx:
+                    f.write("%s\n" % itemy)
     
     print("enter 1 to continue, 0 to exit..")
     inp = int(input())
@@ -886,7 +888,7 @@ cdef void iterate(float p, float T, np.ndarray[dtype=np.float32_t, ndim=1] spect
 
 	# FFT
     # figure out how host_params_h_DLM_d_in points to the same memory location as host_params_h_DLM_d
-    host_params_h_DLM_d_out = cp.fft.rfftn(host_params_h_DLM_d_in) #cufftExecR2C(host_params_h_plan_DLM, host_params_h_DLM_d_in, host_params_h_DLM_d_out)
+    host_params_h_DLM_d_out = cp.fft.rfft(host_params_h_DLM_d_in, axis = 0) #cufftExecR2C(host_params_h_plan_DLM, host_params_h_DLM_d_in, host_params_h_DLM_d_out)
     cp.cuda.runtime.deviceSynchronize()
 
     print("host_params_h_DLM_d_out: ")
@@ -929,9 +931,9 @@ cdef void iterate(float p, float T, np.ndarray[dtype=np.float32_t, ndim=1] spect
 
     print("obtained spectrum_h...")
     #v_arr = np.array([init_params_h.v_min + i * init_params_h.dv for i in range(init_params_h.N_v)])
-    # with open('spectrum_h_out_py.txt', 'w') as f:
-    #     for item in spectrum_h:
-    #         f.write("%s\n" % item)
+    with open('spectrum_h_out_py3.txt', 'w') as f:
+        for item in spectrum_h:
+            f.write("%s\n" % item)
 
     plt.plot(spectrum_h)
     plt.show()
@@ -1037,9 +1039,20 @@ def start():
     cdef np.ndarray[dtype=np.float32_t, ndim=1] spec_h_da = da
 
     host_params_h_v0_dec = np.minimum.reduceat(v0, np.arange(0, len(v0), init_params_h.N_threads_per_block))     #decimate (v0, v0_dec, init_params_h_N_threads_per_block)
+    with open('host_params_h_v0_dec_py.txt', 'w') as f:
+        f.write(str(len(host_params_h_v0_dec)))
+        for item in host_params_h_v0_dec:
+            f.write("%s\n" % str(item))
     host_params_h_dec_size = host_params_h_v0_dec.size()
     host_params_h_da_dec = np.minimum.reduceat(da, np.arange(0, len(da), init_params_h.N_threads_per_block)) #decimate (da, da_dec, init_params_h_N_threads_per_block)
+    
+    with open('host_params_h_da_dec_py.txt', 'w') as f:
+        f.write(str(len(host_params_h_da_dec)))
+        for item in host_params_h_da_dec:
+            f.write("%s\n" % str(item))
     print()
+
+    exit()
 
     # wL inits
     print("Init wL: ")
@@ -1105,6 +1118,27 @@ def start():
     # print(init_params_h.shared_size_floats)
 
     # iterate(0.1, 500, spectrum_h)
+
+
+
+    # cdef int n_blocks
+    # set_pT(0.1, 1000)
+    # print("checkpoint 0.1...")
+    # calc_gaussian_params()
+    # print("checkpoint 0.2...")
+    # calc_lorentzian_params()
+    # print("checkpoint 0.3...")
+    # n_blocks = prepare_blocks()
+
+    # print("n_blocks: ", n_blocks)
+
+    # with open('blockdata_py.txt', 'w') as f:
+    #     for item in iter_params_h.blocks:
+    #         f.write("%s %s\n" % (item.line_offset, item.iv_offset))
+    
+    # exit()
+
+
     print("Allocating device memory...")
 
     # start the CUDA work

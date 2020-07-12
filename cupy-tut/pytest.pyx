@@ -33,7 +33,7 @@ __global__ void add_array(float *a, float adder, int N){
 module = cp.RawModule(code=loaded_from_source)
 ker_sum = module.get_function('add_array')
 
-test_array = cp.zeros((5,5), dtype=cp.float32)
+cdef cp.ndarray[dtype=cp.float32_t, ndim = 2] test_array = cp.zeros((5,5), dtype=cp.float32)
 
 for i in range(5):
     for j in range(5):
