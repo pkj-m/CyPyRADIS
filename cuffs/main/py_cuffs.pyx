@@ -36,8 +36,8 @@ cdef  vector[float] host_params_h_bottom_a
 cdef  vector[float] host_params_h_bottom_b
 
 cdef  int host_params_h_dec_size
-cdef  vector[float] host_params_h_v0_dec
-cdef  vector[float] host_params_h_da_dec
+#cdef  vector[float] host_params_h_v0_dec
+#cdef  vector[float] host_params_h_da_dec
 
 cdef  int host_params_h_shared_size
 
@@ -608,11 +608,12 @@ cdef void calc_gaussian_params():
 
 
 
-cdef int prepare_blocks():
+cdef int prepare_blocks(np.ndarray[dtype=np.float32_t, ndim=1] host_params_h_v0_dec,
+                        np.ndarray[dtype=np.float32_t, ndim=1] host_params_h_da_dec):
 
     # ----------- setup global variables -----------------
-    global host_params_h_v0_dec
-    global host_params_h_da_dec
+    #global host_params_h_v0_dec
+    #global host_params_h_da_dec
     global host_params_h_dec_size
     global host_params_h_block_preparation_step_size
 
@@ -710,6 +711,8 @@ cdef void iterate(float p, float T, np.ndarray[dtype=np.float32_t, ndim=1] spect
     global host_params_h_log_2gs_d
     global host_params_h_na_d
     global host_params_h_log_2vMm_d
+    global host_params_h_v0_dec
+    global host_params_h_da_dec
 
     global host_params_h_stop
     global host_params_h_elapsedTime
@@ -728,7 +731,7 @@ cdef void iterate(float p, float T, np.ndarray[dtype=np.float32_t, ndim=1] spect
     print("checkpoint 0.2...")
     calc_lorentzian_params()
     print("checkpoint 0.3...")
-    n_blocks = prepare_blocks()
+    n_blocks = prepare_blocks(host_params_h_v0_dec, host_params_h_da_dec)
 
     # TODO: once this works, make sure we move definition of host-params-d to main function and just fill it with 0 here
 
@@ -952,8 +955,8 @@ def start():
 
     # ----------- setup global variables -----------------
     global init_params_h
-    global host_params_h_v0_dec
-    global host_params_h_da_dec
+    #global host_params_h_v0_dec
+    #global host_params_h_da_dec
     global host_params_h_dec_size
     global host_params_h_block_preparation_step_size
     global host_params_h_v0_d
@@ -1028,6 +1031,14 @@ def start():
     
     print("Loading v0.npy...")
     cdef np.ndarray[dtype=np.float32_t, ndim=1] v0 = np.load(dir_path+'v0.npy')
+    #np.round(v0, decimals = 2, out=v0)
+
+    # for i in range(10000, 10100):
+    #     print(v0[i])
+    
+    cdef float x = v0[10000]
+    print(x)
+
     print("Done!")
     cdef np.ndarray[dtype=np.float32_t, ndim=1] spec_h_v0 = v0
     
@@ -1038,21 +1049,34 @@ def start():
     print("Done!")
     cdef np.ndarray[dtype=np.float32_t, ndim=1] spec_h_da = da
 
-    host_params_h_v0_dec = np.minimum.reduceat(v0, np.arange(0, len(v0), init_params_h.N_threads_per_block))     #decimate (v0, v0_dec, init_params_h_N_threads_per_block)
-    with open('host_params_h_v0_dec_py.txt', 'w') as f:
-        f.write(str(len(host_params_h_v0_dec)))
-        for item in host_params_h_v0_dec:
-            f.write("%s\n" % str(item))
-    host_params_h_dec_size = host_params_h_v0_dec.size()
-    host_params_h_da_dec = np.minimum.reduceat(da, np.arange(0, len(da), init_params_h.N_threads_per_block)) #decimate (da, da_dec, init_params_h_N_threads_per_block)
-    
-    with open('host_params_h_da_dec_py.txt', 'w') as f:
-        f.write(str(len(host_params_h_da_dec)))
-        for item in host_params_h_da_dec:
-            f.write("%s\n" % str(item))
-    print()
+    #host_params_h_v0_dec = np.minimum.reduceat(v0, np.arange(0, len(v0), init_params_h.N_threads_per_block))     #decimate (v0, v0_dec, init_params_h_N_threads_per_block)
 
-    exit()
+    cdef np.ndarray[dtype=np.float32_t, ndim = 1] host_params_h_v0_dec = np.zeros(len(v0)//init_params_h.N_threads_per_block, dtype=np.float32)
+    for i in range(0, len(v0)//init_params_h.N_threads_per_block):
+        host_params_h_v0_dec[i] = v0[i * init_params_h.N_threads_per_block]
+
+
+    # with open('host_params_h_v0_dec_py2.txt', 'w') as f:
+    #     f.write(str(len(host_params_h_v0_dec)))
+    #     for item in host_params_h_v0_dec:
+    #         f.write("%s\n" % str(item))
+
+    host_params_h_dec_size = len(host_params_h_v0_dec)
+    
+    #host_params_h_da_dec = np.minimum.reduceat(da, np.arange(0, len(da), init_params_h.N_threads_per_block)) #decimate (da, da_dec, init_params_h_N_threads_per_block)
+    
+    cdef np.ndarray[dtype=np.float32_t, ndim = 1] host_params_h_da_dec = np.zeros(len(v0)//init_params_h.N_threads_per_block, dtype=np.float32)
+    
+    for i in range(0, len(v0)//init_params_h.N_threads_per_block):
+        host_params_h_da_dec[i] = da[i * init_params_h.N_threads_per_block]
+
+    # with open('host_params_h_da_dec_py2.txt', 'w') as f:
+    #     f.write(str(len(host_params_h_da_dec)))
+    #     for item in host_params_h_da_dec:
+    #         f.write("%s\n" % str(item))
+    # print()
+
+    # exit()
 
     # wL inits
     print("Init wL: ")
@@ -1121,22 +1145,22 @@ def start():
 
 
 
-    # cdef int n_blocks
-    # set_pT(0.1, 1000)
-    # print("checkpoint 0.1...")
-    # calc_gaussian_params()
-    # print("checkpoint 0.2...")
-    # calc_lorentzian_params()
-    # print("checkpoint 0.3...")
-    # n_blocks = prepare_blocks()
+    cdef int n_blocks
+    set_pT(0.1, 1000)
+    print("checkpoint 0.1...")
+    calc_gaussian_params()
+    print("checkpoint 0.2...")
+    calc_lorentzian_params()
+    print("checkpoint 0.3...")
+    n_blocks = prepare_blocks(host_params_h_v0_dec, host_params_h_da_dec)
 
-    # print("n_blocks: ", n_blocks)
+    print("n_blocks: ", n_blocks)
 
-    # with open('blockdata_py.txt', 'w') as f:
-    #     for item in iter_params_h.blocks:
-    #         f.write("%s %s\n" % (item.line_offset, item.iv_offset))
+    with open('blockdata_py2.txt', 'w') as f:
+        for item in iter_params_h.blocks:
+            f.write("%s %s\n" % (item.line_offset, item.iv_offset))
     
-    # exit()
+    exit()
 
 
     print("Allocating device memory...")
