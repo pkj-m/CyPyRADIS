@@ -684,7 +684,10 @@ cdef int prepare_blocks(np.ndarray[dtype=np.float32_t, ndim=1] host_params_h_v0_
 #    return
 
 
-cdef void iterate(float p, float T, np.ndarray[dtype=np.float32_t, ndim=1] spectrum_h):
+cdef void iterate(float p, float T, 
+                np.ndarray[dtype=np.float32_t, ndim=1] spectrum_h,
+                np.ndarray[dtype=np.float32_t, ndim=1] host_params_h_v0_dec,
+                np.ndarray[dtype=np.float32_t, ndim=1] host_params_h_da_dec):
     
     # ----------- setup global variables -----------------
 
@@ -711,8 +714,8 @@ cdef void iterate(float p, float T, np.ndarray[dtype=np.float32_t, ndim=1] spect
     global host_params_h_log_2gs_d
     global host_params_h_na_d
     global host_params_h_log_2vMm_d
-    global host_params_h_v0_dec
-    global host_params_h_da_dec
+    # global host_params_h_v0_dec
+    # global host_params_h_da_dec
 
     global host_params_h_stop
     global host_params_h_elapsedTime
@@ -734,76 +737,9 @@ cdef void iterate(float p, float T, np.ndarray[dtype=np.float32_t, ndim=1] spect
     n_blocks = prepare_blocks(host_params_h_v0_dec, host_params_h_da_dec)
 
     # TODO: once this works, make sure we move definition of host-params-d to main function and just fill it with 0 here
-
-    # print(n_blocks)
-    # print()
-    # print(host_params_h_start)
-    # print(host_params_h_start_DLM)
-    # print(host_params_h_DLM_d)
-    # print(host_params_h_DLM_d_in)
-    # print(host_params_h_DLM_d_out)
-    # print(host_params_h_stop_DLM)
-    # print(host_params_h_elapsedTimeDLM)
-    # print(host_params_h_spectrum_d)
-    # print(host_params_h_spectrum_d_in)
-    # print(host_params_h_spectrum_d_out)    
-    # print(init_params_h.N_threads_per_block)
-    # print(init_params_h.N_v)
-    # print(init_params_h.N_wG_x_N_wL)
-    # print(host_params_h_v0_d)
-    # print(host_params_h_da_d)
-    # print(host_params_h_S0_d)
-    # print(host_params_h_El_d)
-    # print(host_params_h_log_2gs_d)
-    # print(host_params_h_na_d)
-    # print(host_params_h_log_2vMm_d)
-    # print(host_params_h_stop)
-    # print(host_params_h_elapsedTime)
-    # print()
-    # print(iter_params_h.p)
-    # print(iter_params_h.log_p)
-    # print(iter_params_h.hlog_T)
-    # print(iter_params_h.log_rT)
-    # print(iter_params_h.c2T)
-    # print(iter_params_h.rQ)
-    # print(iter_params_h.log_wG_min)
-    # print(iter_params_h.log_wL_min)
-    # print(iter_params_h.log_dwG)
-    # print(iter_params_h.log_dwL)
-    # for i in range(4096):
-    #     print(iter_params_h.blocks[i].line_offset, end=", ")
-    # print()
-    # for i in range(4096):
-    #     print(iter_params_h.blocks[i].iv_offset, end=", ")
-
     
     print("checkpoint 1...")
     #exit()
-	# Copy iter_params to device #gpuHandleError(cudaMemcpyToSymbol(iter_params_d, iter_params_h, sizeof(iterData)))
-    # iter_params_d_p =                   cp.float32(iter_params_h_p)
-    # print("checkpoint 1.1...")
-    # iter_params_d_log_p =               cp.float32(iter_params_h_log_p)
-    # print("checkpoint 1.2...")
-    # iter_params_d_hlog_T =              cp.float32(iter_params_h_hlog_T)
-    # print("checkpoint 1.3...")
-    # iter_params_d_log_rT =              cp.float32(iter_params_h_log_rT)
-    # print("checkpoint 1.4...")
-    # iter_params_d_c2T =                 cp.float32(iter_params_h_c2T)
-    # print("checkpoint 1.5...")
-    # iter_params_d_rQ =                  cp.float32(iter_params_h_rQ)
-    # print("checkpoint 1.6...")
-    # iter_params_d_log_wG_min =          cp.float32(iter_params_h_log_wG_min)
-    # print("checkpoint 1.7...")
-    # iter_params_d_log_wL_min =          cp.float32(iter_params_h_log_wL_min)
-    # print("checkpoint 1.8...")
-    # iter_params_d_log_dwG =             cp.float32(iter_params_h_log_dwG)
-    # print("checkpoint 1.9...")
-    # iter_params_d_log_dwL =             cp.float32(iter_params_h_log_dwL)
-    # print("checkpoint 1.10...")
-    # iter_params_d_blocks_line_offset =  cp.array(iter_params_h_blocks_line_offset)
-    # print("checkpoint 1.11...")
-    # iter_params_d_blocks_iv_offset =    cp.array(iter_params_h_blocks_iv_offset)
-
     memptr_iter_params_d = cuda_module.get_global("iter_params_d")
 
     iter_params_ptr = ctypes.cast(ctypes.pointer(iter_params_h),ctypes.c_void_p)
@@ -817,7 +753,7 @@ cdef void iterate(float p, float T, np.ndarray[dtype=np.float32_t, ndim=1] spect
 	# Zero DLM:
 
 
-    host_params_h_DLM_d_in = cp.zeros((2 * init_params_h.N_v, init_params_h.N_wG, init_params_h.N_wL), order='F', dtype=cp.float32)
+    host_params_h_DLM_d_in = cp.zeros((2 * init_params_h.N_v, init_params_h.N_wL, init_params_h.N_wG), order='C', dtype=cp.float32)
     host_params_h_spectrum_d_in = cp.zeros(init_params_h.N_v + 1, dtype=cp.complex64)
 
     #host_params_h_DLM_d_in.fill(0)  #gpuHandleError(cudaMemset(host_params_h_DLM_d, 0, 2 * (init_params_h_N_v + 1) * init_params_h_N_wG_x_N_wL * sizeof(float)))
@@ -877,7 +813,8 @@ cdef void iterate(float p, float T, np.ndarray[dtype=np.float32_t, ndim=1] spect
     # for i in host_params_h_DLM_d_in:
     #     print(i, end=", ")
     #print(host_params_h_DLM_d_in)
-    with open('host_params_h_DLM_h_py3.txt', 'w') as f:
+
+    with open('host_params_h_DLM_h_py5C.txt', 'w') as f:
         for item in host_params_h_DLM_d_in:
             for itemx in item:
                 for itemy in itemx:
@@ -888,6 +825,11 @@ cdef void iterate(float p, float T, np.ndarray[dtype=np.float32_t, ndim=1] spect
 
     if inp==0:
         exit()
+
+
+    # cdef np.ndarray[dtype=np.float32_t, ndim=1] host_params_h_DLM_h_in = np.loadtxt('outvals/host_params_h_DLM_h_out_cpp.txt', dtype=np.float32)
+    # np.resize(host_params_h_DLM_h_in, ((2 * init_params_h.N_v, init_params_h.N_wG, init_params_h.N_wL)))
+    # host_params_h_DLM_d_in = cp.array(host_params_h_DLM_h_in)
 
 	# FFT
     # figure out how host_params_h_DLM_d_in points to the same memory location as host_params_h_DLM_d
@@ -934,7 +876,7 @@ cdef void iterate(float p, float T, np.ndarray[dtype=np.float32_t, ndim=1] spect
 
     print("obtained spectrum_h...")
     #v_arr = np.array([init_params_h.v_min + i * init_params_h.dv for i in range(init_params_h.N_v)])
-    with open('spectrum_h_out_py3.txt', 'w') as f:
+    with open('outvals/spectrum_h_out_py6.txt', 'w') as f:
         for item in spectrum_h:
             f.write("%s\n" % item)
 
@@ -973,20 +915,6 @@ def start():
 
     # NOTE: Please make sure you change the limits on line 1161-2 and specify the waverange corresponding to the dataset being used
     dir_path = '/home/pankaj/radis-lab/data-1750-1850/'
-
-    # cdef vector[float] v0
-    # cdef vector[float] da
-    # cdef vector[float] S0
-    # cdef vector[float] El
-    # cdef vector[float] log_2vMm
-    # cdef vector[float] na
-    # cdef vector[float] log_2gs
-    # cdef vector[float] v0_dec
-    # cdef vector[float] da_dec
-
-    # cdef vector[float] spectrum_h
-    # cdef vector[float] v_arr
-
 
     init_params_h.v_min = 1750.0
     init_params_h.v_max = 1850.0
@@ -1145,22 +1073,22 @@ def start():
 
 
 
-    cdef int n_blocks
-    set_pT(0.1, 1000)
-    print("checkpoint 0.1...")
-    calc_gaussian_params()
-    print("checkpoint 0.2...")
-    calc_lorentzian_params()
-    print("checkpoint 0.3...")
-    n_blocks = prepare_blocks(host_params_h_v0_dec, host_params_h_da_dec)
+    # cdef int n_blocks
+    # set_pT(0.1, 1000)
+    # print("checkpoint 0.1...")
+    # calc_gaussian_params()
+    # print("checkpoint 0.2...")
+    # calc_lorentzian_params()
+    # print("checkpoint 0.3...")
+    # n_blocks = prepare_blocks(host_params_h_v0_dec, host_params_h_da_dec)
 
-    print("n_blocks: ", n_blocks)
+    # print("n_blocks: ", n_blocks)
 
-    with open('blockdata_py2.txt', 'w') as f:
-        for item in iter_params_h.blocks:
-            f.write("%s %s\n" % (item.line_offset, item.iv_offset))
+    # with open('blockdata_py2.txt', 'w') as f:
+    #     for item in iter_params_h.blocks:
+    #         f.write("%s %s\n" % (item.line_offset, item.iv_offset))
     
-    exit()
+    # exit()
 
 
     print("Allocating device memory...")
@@ -1277,7 +1205,7 @@ def start():
     dT = 500
 
 
-    iterate(p, 1000, spectrum_h)
+    iterate(p, 1000, spectrum_h, host_params_h_v0_dec, host_params_h_da_dec)
     # for T in range(T_min, T_max, dT):
     #     iterate(p, T)
     # return
