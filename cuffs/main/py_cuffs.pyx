@@ -208,6 +208,8 @@ __global__ void fillDLM(
 			int iv0 = (int)iv;
 			int iv1 = iv0 + 1  ;
 
+            //arr_idx[i] = iv0;
+
 			//^4
 
 			if ((iv0 >= 0) && (iv1 < init_params_d.N_v)) {
@@ -219,12 +221,16 @@ __global__ void fillDLM(
 				int iwG1 = iwG0 + 1;
 				//^8
 
+                //arr_idx[i] = iwG0;
+
 				//Calc wL
 				float log_wL_dat = log_2gs[i] + iter_params_d.log_p + na[i] * iter_params_d.log_rT;
 				float iwL = (log_wL_dat - iter_params_d.log_wL_min) / iter_params_d.log_dwL;
 				int iwL0 = (int)iwL;
 				int iwL1 = iwL0 + 1;
 				//^12
+
+                //arr_idx[i] = iwL0;
 
 				//Calc I
 				float I_add = iter_params_d.rQ * S0[i] * (expf(iter_params_d.c2T * El[i]) - expf(iter_params_d.c2T * (El[i] + v0[i])));
@@ -241,23 +247,14 @@ __global__ void fillDLM(
 				float Iv0 = I_add * (1 - av);
 				float Iv1 = I_add * av;
 
-				//atomicAdd(&DLM[iwG0 + iwL0 * NwG + iv0 * NwGxNwL], aV00 * Iv0);
-				//atomicAdd(&DLM[iwG0 + iwL0 * NwG + iv1 * NwGxNwL], aV00 * Iv1);
-				//atomicAdd(&DLM[iwG0 + iwL1 * NwG + iv0 * NwGxNwL], aV01 * Iv0);
-				//atomicAdd(&DLM[iwG0 + iwL1 * NwG + iv1 * NwGxNwL], aV01 * Iv1); 
-				//atomicAdd(&DLM[iwG1 + iwL0 * NwG + iv0 * NwGxNwL], aV10 * Iv0);
-				//atomicAdd(&DLM[iwG1 + iwL0 * NwG + iv1 * NwGxNwL], aV10 * Iv1);
-				//atomicAdd(&DLM[iwG1 + iwL1 * NwG + iv0 * NwGxNwL], aV11 * Iv0);
-				//atomicAdd(&DLM[iwG1 + iwL1 * NwG + iv1 * NwGxNwL], aV11 * Iv1);
-
-                DLM[iwG0 + iwL0 * NwG + iv0 * NwGxNwL] += (aV00 * Iv0);
-                DLM[iwG0 + iwL0 * NwG + iv1 * NwGxNwL] += (aV00 * Iv1);
-                DLM[iwG0 + iwL1 * NwG + iv0 * NwGxNwL] += (aV01 * Iv0);
-                DLM[iwG0 + iwL1 * NwG + iv1 * NwGxNwL] += (aV01 * Iv1); 
-                DLM[iwG1 + iwL0 * NwG + iv0 * NwGxNwL] += (aV10 * Iv0);
-                DLM[iwG1 + iwL0 * NwG + iv1 * NwGxNwL] += (aV10 * Iv1);
-                DLM[iwG1 + iwL1 * NwG + iv0 * NwGxNwL] += (aV11 * Iv0);
-                DLM[iwG1 + iwL1 * NwG + iv1 * NwGxNwL] += (aV11 * Iv1);
+				atomicAdd(&DLM[iwG0 + iwL0 * NwG + iv0 * NwGxNwL], aV00 * Iv0);
+				atomicAdd(&DLM[iwG0 + iwL0 * NwG + iv1 * NwGxNwL], aV00 * Iv1);
+				atomicAdd(&DLM[iwG0 + iwL1 * NwG + iv0 * NwGxNwL], aV01 * Iv0);
+				atomicAdd(&DLM[iwG0 + iwL1 * NwG + iv1 * NwGxNwL], aV01 * Iv1); 
+				atomicAdd(&DLM[iwG1 + iwL0 * NwG + iv0 * NwGxNwL], aV10 * Iv0);
+				atomicAdd(&DLM[iwG1 + iwL0 * NwG + iv1 * NwGxNwL], aV10 * Iv1);
+				atomicAdd(&DLM[iwG1 + iwL1 * NwG + iv0 * NwGxNwL], aV11 * Iv0);
+				atomicAdd(&DLM[iwG1 + iwL1 * NwG + iv1 * NwGxNwL], aV11 * Iv1);
 			}
 		}
 	} 
@@ -693,18 +690,6 @@ cdef void iterate(float p, float T,
 
     global host_params_h_start
 
-    # global host_params_h_start_DLM
-    # global host_params_h_DLM_d
-    # global host_params_h_DLM_d_in
-    # global host_params_h_DLM_d_out
-    # global host_params_h_stop_DLM
-    # global host_params_h_elapsedTimeDLM
-
-    #global host_params_h_shared_size
-    # global host_params_h_spectrum_d
-    # global host_params_h_spectrum_d_in
-    # global host_params_h_spectrum_d_out    
-
     global init_params_h, iter_params_h
 
     global host_params_h_v0_d
@@ -714,9 +699,6 @@ cdef void iterate(float p, float T,
     global host_params_h_log_2gs_d
     global host_params_h_na_d
     global host_params_h_log_2vMm_d
-    # global host_params_h_v0_dec
-    # global host_params_h_da_dec
-
     global host_params_h_stop
     global host_params_h_elapsedTime
 
@@ -739,7 +721,53 @@ cdef void iterate(float p, float T,
     # TODO: once this works, make sure we move definition of host-params-d to main function and just fill it with 0 here
     
     print("checkpoint 1...")
-    #exit()
+
+    ####################### ALL PRINTING OF VALUES ON TERMINAL AND FILES TO BE DONE HERE ################################
+    # print ITER_PARAMS_h to file
+
+
+    # print("copying init_params_h to file...")
+
+    # with open('init_params_h_py.txt', 'w') as f:
+    #     f.write("%s\n" % str(init_params_h.v_min))
+    #     f.write("%s\n" % str(init_params_h.v_max))
+    #     f.write("%s\n" % str(init_params_h.dv))
+    #     f.write("%s\n" % str(init_params_h.N_v))
+    #     f.write("%s\n" % str(init_params_h.N_wG))
+    #     f.write("%s\n" % str(init_params_h.N_wL))
+    #     f.write("%s\n" % str(init_params_h.N_wG_x_N_wL))
+    #     f.write("%s\n" % str(init_params_h.N_total))
+    #     f.write("%s\n" % str(init_params_h.Max_lines))
+    #     f.write("%s\n" % str(init_params_h.N_lines))
+    #     f.write("%s\n" % str(init_params_h.N_points_per_block))
+    #     f.write("%s\n" % str(init_params_h.N_threads_per_block))
+    #     f.write("%s\n" % str(init_params_h.N_blocks_per_grid))
+    #     f.write("%s\n" % str(init_params_h.N_points_per_thread))
+    #     f.write("%s\n" % str(init_params_h.Max_iterations_per_thread))
+    #     f.write("%s\n" % str(init_params_h.shared_size_floats))
+
+    # print("copying iter_params_h to file...")
+    # with open('iter_params_h_py.txt', 'w') as f:
+    #     f.write("%s\n" % str(iter_params_h.p))
+    #     f.write("%s\n" % str(iter_params_h.log_p))
+    #     f.write("%s\n" % str(iter_params_h.hlog_T))
+    #     f.write("%s\n" % str(iter_params_h.log_rT))
+    #     f.write("%s\n" % str(iter_params_h.c2T))
+    #     f.write("%s\n" % str(iter_params_h.rQ))
+    #     f.write("%s\n" % str(iter_params_h.log_wG_min))
+    #     f.write("%s\n" % str(iter_params_h.log_wL_min))
+    #     f.write("%s\n" % str(iter_params_h.log_dwG))
+    #     f.write("%s\n" % str(iter_params_h.log_dwL))
+    #     #("blocks", blockData * 4096)
+
+    # with open('iter_params_h_blocks_py.txt', 'w') as f:
+    #     for i in range(4096):
+    #         f.write("%s %s\n" % (str(iter_params_h.blocks[i].line_offset), str(iter_params_h.blocks[i].iv_offset)))
+
+    # exit()
+
+    ########################################################################################################################
+
     memptr_iter_params_d = cuda_module.get_global("iter_params_d")
 
     iter_params_ptr = ctypes.cast(ctypes.pointer(iter_params_h),ctypes.c_void_p)
@@ -747,7 +775,7 @@ cdef void iterate(float p, float T,
     print('sizeof p:', struct_size)
 
     memptr_iter_params_d.copy_from_host(iter_params_ptr,struct_size)
-
+    print("iter_params_h copied to device...")
 
     print("checkpoint 2...")
 	# Zero DLM:
@@ -756,37 +784,11 @@ cdef void iterate(float p, float T,
     host_params_h_DLM_d_in = cp.zeros((2 * init_params_h.N_v, init_params_h.N_wL, init_params_h.N_wG), order='C', dtype=cp.float32)
     host_params_h_spectrum_d_in = cp.zeros(init_params_h.N_v + 1, dtype=cp.complex64)
 
-    #host_params_h_DLM_d_in.fill(0)  #gpuHandleError(cudaMemset(host_params_h_DLM_d, 0, 2 * (init_params_h_N_v + 1) * init_params_h_N_wG_x_N_wL * sizeof(float)))
+    indices_iv0 = cp.zeros(init_params_h.N_lines, dtype=cp.int32)
 
     print("Getting ready...")
-	# Launch Kernel:
-    #host_params_h_start_DLM.record()
-
     print("checkpoint 3...")
 
-	# from population calculation to calculating the line set
-
-    print("host_params_h_v0_d = ", len(host_params_h_v0_d))
-    print(host_params_h_v0_d)
-
-    print("host_params_h_da_d = ", len(host_params_h_da_d))
-    print(host_params_h_da_d)
-
-    print("host_params_h_S0_d = ", len(host_params_h_S0_d))
-    print(host_params_h_S0_d)
-
-    print("host_params_h_El_d = ", len(host_params_h_El_d))
-    print(host_params_h_El_d)
-
-    print("host_params_h_log_2gs_d = ", len(host_params_h_log_2gs_d))
-    print(host_params_h_log_2gs_d)
-
-    print("host_params_h_na_d = ", len(host_params_h_na_d))
-    print(host_params_h_na_d)
-
-    print("host_params_h_log_2vMm_d = ", len(host_params_h_log_2vMm_d))
-    print(host_params_h_log_2vMm_d)
-    
     fillDLM ((n_blocks,), (init_params_h.N_threads_per_block,), #host_params_h_shared_size 
         (
 		host_params_h_v0_d,
@@ -796,10 +798,22 @@ cdef void iterate(float p, float T,
 		host_params_h_log_2gs_d,
 		host_params_h_na_d,
 		host_params_h_log_2vMm_d,
-		host_params_h_DLM_d_in
+		host_params_h_DLM_d_in,
+        indices_iv0
         ))
 
     print("checkpoint 4...")
+
+    ################################################
+    indices_iv0_h = indices_iv0.get()
+
+    with open("indices_iwL0_py.txt", 'w') as f:
+        for i in indices_iv0_h:
+            f.write("%s \n" % str(i))
+
+    
+    
+    
 
     #host_params_h_stop_DLM.record()
     #cp.cuda.runtime.eventSynchronize(host_params_h_stop_DLM_ptr)
@@ -809,27 +823,14 @@ cdef void iterate(float p, float T,
     cp.cuda.runtime.deviceSynchronize()
     print('checkpoint 5...')
 
-    # print("printing host_params_h_DLM_d_in: ")
-    # for i in host_params_h_DLM_d_in:
-    #     print(i, end=", ")
-    #print(host_params_h_DLM_d_in)
-
-    with open('host_params_h_DLM_h_py5C.txt', 'w') as f:
-        for item in host_params_h_DLM_d_in:
-            for itemx in item:
-                for itemy in itemx:
-                    f.write("%s\n" % itemy)
+    # with open('host_params_h_DLM_h_py5C.txt', 'w') as f:
+    #     for item in host_params_h_DLM_d_in:
+    #         for itemx in item:
+    #             for itemy in itemx:
+    #                 f.write("%s\n" % itemy)
     
-    print("enter 1 to continue, 0 to exit..")
-    inp = int(input())
-
-    if inp==0:
-        exit()
-
-
-    # cdef np.ndarray[dtype=np.float32_t, ndim=1] host_params_h_DLM_h_in = np.loadtxt('outvals/host_params_h_DLM_h_out_cpp.txt', dtype=np.float32)
-    # np.resize(host_params_h_DLM_h_in, ((2 * init_params_h.N_v, init_params_h.N_wG, init_params_h.N_wL)))
-    # host_params_h_DLM_d_in = cp.array(host_params_h_DLM_h_in)
+   
+    
 
 	# FFT
     # figure out how host_params_h_DLM_d_in points to the same memory location as host_params_h_DLM_d
@@ -876,9 +877,9 @@ cdef void iterate(float p, float T,
 
     print("obtained spectrum_h...")
     #v_arr = np.array([init_params_h.v_min + i * init_params_h.dv for i in range(init_params_h.N_v)])
-    with open('outvals/spectrum_h_out_py6.txt', 'w') as f:
-        for item in spectrum_h:
-            f.write("%s\n" % item)
+    # with open('outvals/spectrum_h_out_py6.txt', 'w') as f:
+    #     for item in spectrum_h:
+    #         f.write("%s\n" % item)
 
     plt.plot(spectrum_h)
     plt.show()
@@ -925,10 +926,6 @@ def start():
     init_params_h.N_wL = 8 
     cdef np.ndarray[dtype=np.float32_t, ndim=1] spectrum_h = np.zeros(init_params_h.N_v, dtype=np.float32)
 
-    # for i in range(init_params_h.N_v):
-    #     v_arr.push_back(init_params_h.v_min + i * init_params_h.dv)
-    #cdef np.ndarray[dtype=np.float32_t, ndim=1] v_arr = np.array([init_params_h.v_min + i * init_params_h.dv for i in range(init_params_h.N_v)])
-
     init_params_h.Max_iterations_per_thread = 1024
     host_params_h_block_preparation_step_size = 128
 
@@ -955,14 +952,8 @@ def start():
     print("Init v : ")
     init_params_h.Max_lines = int(2.4E8)
 
-    #read_npy(dir_path+'v0.npy', v0)
-    
     print("Loading v0.npy...")
     cdef np.ndarray[dtype=np.float32_t, ndim=1] v0 = np.load(dir_path+'v0.npy')
-    #np.round(v0, decimals = 2, out=v0)
-
-    # for i in range(10000, 10100):
-    #     print(v0[i])
     
     cdef float x = v0[10000]
     print(x)
@@ -977,34 +968,16 @@ def start():
     print("Done!")
     cdef np.ndarray[dtype=np.float32_t, ndim=1] spec_h_da = da
 
-    #host_params_h_v0_dec = np.minimum.reduceat(v0, np.arange(0, len(v0), init_params_h.N_threads_per_block))     #decimate (v0, v0_dec, init_params_h_N_threads_per_block)
-
     cdef np.ndarray[dtype=np.float32_t, ndim = 1] host_params_h_v0_dec = np.zeros(len(v0)//init_params_h.N_threads_per_block, dtype=np.float32)
     for i in range(0, len(v0)//init_params_h.N_threads_per_block):
         host_params_h_v0_dec[i] = v0[i * init_params_h.N_threads_per_block]
 
-
-    # with open('host_params_h_v0_dec_py2.txt', 'w') as f:
-    #     f.write(str(len(host_params_h_v0_dec)))
-    #     for item in host_params_h_v0_dec:
-    #         f.write("%s\n" % str(item))
-
     host_params_h_dec_size = len(host_params_h_v0_dec)
-    
-    #host_params_h_da_dec = np.minimum.reduceat(da, np.arange(0, len(da), init_params_h.N_threads_per_block)) #decimate (da, da_dec, init_params_h_N_threads_per_block)
     
     cdef np.ndarray[dtype=np.float32_t, ndim = 1] host_params_h_da_dec = np.zeros(len(v0)//init_params_h.N_threads_per_block, dtype=np.float32)
     
     for i in range(0, len(v0)//init_params_h.N_threads_per_block):
         host_params_h_da_dec[i] = da[i * init_params_h.N_threads_per_block]
-
-    # with open('host_params_h_da_dec_py2.txt', 'w') as f:
-    #     f.write(str(len(host_params_h_da_dec)))
-    #     for item in host_params_h_da_dec:
-    #         f.write("%s\n" % str(item))
-    # print()
-
-    # exit()
 
     # wL inits
     print("Init wL: ")
@@ -1049,110 +1022,8 @@ def start():
     print("Number of lines loaded: {0}".format(init_params_h.N_lines))
     print()
 
-    
 
-    # INIT_PARAMS_H match 
-    # print(init_params_h.v_min)
-    # print(init_params_h.v_max)
-    # print(init_params_h.dv)
-    # print(init_params_h.N_v)
-    # print(init_params_h.N_wG)
-    # print(init_params_h.N_wL)
-    # print(init_params_h.N_wG_x_N_wL)
-    # print(init_params_h.N_total)
-    # print(init_params_h.Max_lines)
-    # print(init_params_h.N_lines)
-    # print(init_params_h.N_points_per_block)
-    # print(init_params_h.N_threads_per_block)
-    # print(init_params_h.N_blocks_per_grid)
-    # print(init_params_h.N_points_per_thread)
-    # print(init_params_h.Max_iterations_per_thread)
-    # print(init_params_h.shared_size_floats)
-
-    # iterate(0.1, 500, spectrum_h)
-
-
-
-    # cdef int n_blocks
-    # set_pT(0.1, 1000)
-    # print("checkpoint 0.1...")
-    # calc_gaussian_params()
-    # print("checkpoint 0.2...")
-    # calc_lorentzian_params()
-    # print("checkpoint 0.3...")
-    # n_blocks = prepare_blocks(host_params_h_v0_dec, host_params_h_da_dec)
-
-    # print("n_blocks: ", n_blocks)
-
-    # with open('blockdata_py2.txt', 'w') as f:
-    #     for item in iter_params_h.blocks:
-    #         f.write("%s %s\n" % (item.line_offset, item.iv_offset))
-    
-    # exit()
-
-
-    print("Allocating device memory...")
-
-    # start the CUDA work
-
-    #gpuHandleError(cudaSetDevice(0));
-
-    #gpuHandleError(cudaFuncSetAttribute(fillDLM, cudaFuncAttributeMaxDynamicSharedMemorySize, host_params_h.shared_size));   <------- how to do this is CuPy?
-
-    # not needed as declared in the global space ----------------->
-
-	#gpuHandleError(cudaEventCreate(&host_params_h.start));
-	#gpuHandleError(cudaEventCreate(&host_params_h.start_DLM));
-	#gpuHandleError(cudaEventCreate(&host_params_h.stop));
-	#gpuHandleError(cudaEventCreate(&host_params_h.stop_DLM));
-
-	#Device memory allocations:
-	#TARGET: These will all be made redundant by CuPy memory transfers
-	# gpuHandleError(cudaMalloc((void**)&host_params_h.v0_d, init_params_h.N_lines * sizeof(float)));
-	# gpuHandleError(cudaMalloc((void**)&host_params_h.da_d, init_params_h.N_lines * sizeof(float)));
-	# gpuHandleError(cudaMalloc((void**)&host_params_h.S0_d, init_params_h.N_lines * sizeof(float)));
-	# gpuHandleError(cudaMalloc((void**)&host_params_h.El_d, init_params_h.N_lines * sizeof(float)));
-	# gpuHandleError(cudaMalloc((void**)&host_params_h.log_2gs_d, init_params_h.N_lines * sizeof(float)));
-	# gpuHandleError(cudaMalloc((void**)&host_params_h.na_d, init_params_h.N_lines * sizeof(float)));
-	# gpuHandleError(cudaMalloc((void**)&host_params_h.log_2vMm_d, init_params_h.N_lines * sizeof(float)));
-
-	#gpuHandleError(cudaMalloc((void**)&init_params_d, sizeof(initData)));      <-- dont't have to allocate memory, happens automatically when moving to device
-	#gpuHandleError(cudaMalloc((void**)&iter_params_d, sizeof(iterData)));      <-- same as above
-
-    # <--------------------------------------------------------------
-
-	# DLM is allocated once, but must be zero'd every iteration ---> not needed anymore
-
-    # when using CuPy, these lines are redundant...
-   
-    
-	
-    
-    #host_params_h.spectrum_d_in = (cufftComplex*)host_params_h.spectrum_d;
-	#host_params_h.spectrum_d_out = (cufftReal*)host_params_h.spectrum_d;
-    print("Done!")
-
-
-	# Copy params to device
-    print("Copying data to device... ")
-	# gpuHandleError(cudaMemcpyToSymbol(init_params_d, &init_params_h, sizeof(initData)));
-
-    # init_params_d_v_min =                       cp.float32(init_params_h_v_min)
-    # init_params_d_v_max =                       cp.float32(init_params_h_v_max)
-    # init_params_d_dv =                          cp.float32(init_params_h_dv)
-    # init_params_d_N_v =                         cp.int32(init_params_h_N_v)
-    # init_params_d_N_wG =                        cp.int32(init_params_h_N_wG)
-    # init_params_d_N_wL =                        cp.int32(init_params_h_N_wL)
-    # init_params_d_N_wG_x_N_wL =                 cp.int32(init_params_h_N_wG_x_N_wL)
-    # init_params_d_N_total =                     cp.int32(init_params_h_N_total)
-    # init_params_d_Max_lines =                   cp.int32(init_params_h_Max_lines)
-    # init_params_d_N_lines =                     cp.int32(init_params_h_N_lines)
-    # init_params_d_N_points_per_block =          cp.int32(init_params_h_N_points_per_block)
-    # init_params_d_N_threads_per_block =         cp.int32(init_params_h_N_threads_per_block)
-    # init_params_d_N_blocks_per_grid =           cp.int32(init_params_h_N_blocks_per_grid)
-    # init_params_d_N_points_per_thread =         cp.int32(init_params_h_N_points_per_thread)
-    # init_params_d_Max_iterations_per_thread =   cp.int32(init_params_h_Max_iterations_per_thread)
-    # init_params_d_shared_size_floats =          cp.int32(init_params_h_shared_size_floats)
+    print("Allocating device memory and copying data...")
 
     memptr_init_params_d = cuda_module.get_global("init_params_d")
 
@@ -1161,7 +1032,7 @@ def start():
     print('sizeof p:', init_params_size)
     memptr_init_params_d.copy_from_host(init_params_ptr, init_params_size)
 
-    print("copied init_params_h data to device")
+    print("copied init_params_h data to device...")
 
 	# #Copy spectral data to device
     host_params_h_v0_d =        cp.array(spec_h_v0)
@@ -1173,24 +1044,6 @@ def start():
     host_params_h_log_2vMm_d =  cp.array(spec_h_log_2vMm)
     
     print("Done!")
-
-	#print("Planning FFT's... ")
-	# Plan DLM FFT
-	# this is not needed in case of CuPy -------------------->
-
-    # cdef int n_fft[] = { 2 * init_params_h_N_v };
-	# # This can be replaced by CuPy.fft
-	# cufftCreate(&host_params_h_plan_DLM);
-	# cufftPlanMany(&host_params_h_plan_DLM, 1, n_fft,
-	#	n_fft, init_params_h_N_wG_x_N_wL, 1,
-	#	n_fft, init_params_h_N_wG_x_N_wL, 1, CUFFT_R2C, init_params_h_N_wG_x_N_wL);
-
-	# cufftCreate(&host_params_h_plan_spectrum);
-	# cufftPlan1d(&host_params_h_plan_spectrum, n_fft[0], CUFFT_C2R, 1);
-	# print("Done!")
-
-    # <--------------------------------------------------------
-
     print("Press any key to start iterations...")
     _ = input()
 
