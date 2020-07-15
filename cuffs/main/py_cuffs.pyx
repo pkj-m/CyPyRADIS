@@ -682,7 +682,7 @@ cdef int prepare_blocks(np.ndarray[dtype=np.float32_t, ndim=1] host_params_h_v0_
 #    return
 
 
-cdef void iterate(float p, float T, 
+cdef np.ndarray[dtype=np.float32_t, ndim=1] iterate(float p, float T, 
                 np.ndarray[dtype=np.float32_t, ndim=1] spectrum_h,
                 np.ndarray[dtype=np.float32_t, ndim=1] host_params_h_v0_dec,
                 np.ndarray[dtype=np.float32_t, ndim=1] host_params_h_da_dec):
@@ -702,8 +702,8 @@ cdef void iterate(float p, float T,
     global host_params_h_stop
     global host_params_h_elapsedTime
 
-    # global host_params_h_DLM_d_in
-    # global host_params_h_spectrum_d_in
+    global host_params_h_DLM_d_in
+    global host_params_h_spectrum_d_in
 
     global cuda_module
     #------------------------------------------------------
@@ -724,11 +724,10 @@ cdef void iterate(float p, float T,
     memptr_iter_params_d.copy_from_host(iter_params_ptr,struct_size)
 
 	# Zero DLM:
-    # host_params_h_DLM_d_in.fill(0)
-    # host_params_h_spectrum_d_in.fill(0)
+    host_params_h_DLM_d_in.fill(0)
+    host_params_h_spectrum_d_in.fill(0)
 
-    host_params_h_DLM_d_in = cp.zeros((2 * init_params_h.N_v, init_params_h.N_wL, init_params_h.N_wG), order='C', dtype=cp.float32)
-    host_params_h_spectrum_d_in = cp.zeros(init_params_h.N_v + 1, dtype=cp.complex64)
+    
 
     print("Getting ready...")
 
@@ -780,23 +779,23 @@ cdef void iterate(float p, float T,
     cp.cuda.runtime.deviceSynchronize()
 
     spectrum_h_pre = host_params_h_spectrum_d_out.get() 
-    with open("test_file.txt", 'w') as f:
-        for i in spectrum_h_pre:
-            f.write("%s\n" % str(i))
+    # with open("test_file.txt", 'w') as f:
+    #     for i in spectrum_h_pre:
+    #         f.write("%s\n" % str(i))
 
     #host_params_h_stop.record()
     cp.cuda.runtime.eventSynchronize(host_params_h_stop_ptr)
     #host_params_h_elapsedTime = cp.cuda.get_elapsed_time(host_params_h_start, host_params_h_stop)
 
     spectrum_h = spectrum_h_pre[:init_params_h.N_v]
-    with open("test_file_spectrum.txt", 'w') as f:
-        for i in spectrum_h_pre:
-            f.write("%s\n" % str(i))
+    # with open("test_file_spectrum.txt", 'w') as f:
+    #     for i in spectrum_h_pre:
+    #         f.write("%s\n" % str(i))
 	#cout << "(" << elapsedTime << " ms)" << endl;
-
-    v_arr = np.array([init_params_h.v_min + i * init_params_h.dv for i in range(init_params_h.N_v)])
-    plt.plot(v_arr, spectrum_h)
-    plt.show()
+    print("spectrum in iterate function: ", spectrum_h[0])
+    # v_arr = np.array([init_params_h.v_min + i * init_params_h.dv for i in range(init_params_h.N_v)])
+    # plt.plot(v_arr, spectrum_h)
+    # plt.show()
     print("[rG = {0}%".format((np.exp(iter_params_h.log_dwG) - 1) * 100), end = " ")
     print("rL = {0}%]".format((np.exp(iter_params_h.log_dwL) - 1) * 100) )
     #print("Runtime: {0}".format(host_params_h_elapsedTimeDLM))
@@ -804,7 +803,7 @@ cdef void iterate(float p, float T,
     #print(" = {0} ms".format(host_params_h_elapsedTime))
 
 
-    return
+    return spectrum_h
 
 
 def start():
@@ -926,7 +925,8 @@ def start():
 
     print("Allocating device memory and copying data...")
 
-   
+    host_params_h_DLM_d_in = cp.zeros((2 * init_params_h.N_v, init_params_h.N_wL, init_params_h.N_wG), order='C', dtype=cp.float32)
+    host_params_h_spectrum_d_in = cp.zeros(init_params_h.N_v + 1, dtype=cp.complex64)
     
     print("Copying init_params to device...")
     memptr_init_params_d = cuda_module.get_global("init_params_d")
@@ -961,14 +961,17 @@ def start():
     dT = 500
 
     v_arr = np.array([init_params_h.v_min + i * init_params_h.dv for i in range(init_params_h.N_v)])
-    iterate(p, 1000, spectrum_h, host_params_h_v0_dec, host_params_h_da_dec)
+    #spectrum_h = iterate(p, 1000, spectrum_h, host_params_h_v0_dec, host_params_h_da_dec)
+    #print("spectrum in start function: ", spectrum_h[0])
     #plt.plot(v_arr, spectrum_h, "-")
-    # for T in range(T_min, T_max, dT):
-    #     iterate(p, T, spectrum_h, host_params_h_v0_dec, host_params_h_da_dec)
-    #     plt.plot(v_arr, spectrum_h, "-");
+    for T in range(T_min, T_max, dT):
+        spectrum_h = iterate(p, T, spectrum_h, host_params_h_v0_dec, host_params_h_da_dec)
+        plt.semilogy(v_arr, spectrum_h, "-")
 
-    #plt.xlim(init_params_h.v_max, init_params_h.v_min)
-    #lt.show()
+    plt.xlim(init_params_h.v_max, init_params_h.v_min)
+    plt.show()
+
+    cp._default_memory_pool.free_all_blocks()
 
     #Cleanup and go home:
 	#cudaEventDestroy(host_params_h_start);
