@@ -788,11 +788,17 @@ cdef np.ndarray[dtype=np.float32_t, ndim=1] iterate(float p, float T,
     #host_params_h_elapsedTime = cp.cuda.get_elapsed_time(host_params_h_start, host_params_h_stop)
 
     spectrum_h = spectrum_h_pre[:init_params_h.N_v]
-    # with open("test_file_spectrum.txt", 'w') as f:
-    #     for i in spectrum_h_pre:
-    #         f.write("%s\n" % str(i))
-	#cout << "(" << elapsedTime << " ms)" << endl;
-    print("spectrum in iterate function: ", spectrum_h[0])
+    spectrum_h = spectrum_h * float(init_params_h.N_v) * 2
+    cnt = 0
+    spectrum_h = np.flip(spectrum_h)
+    with open("test_file_spectrum_16_july_3.txt", 'w') as f:
+        for i in spectrum_h:
+            f.write("%s\n" % str(i))
+            cnt += 1
+            if cnt == 10000:
+                break
+    
+    #print("spectrum in iterate function: ", spectrum_h[0])
     # v_arr = np.array([init_params_h.v_min + i * init_params_h.dv for i in range(init_params_h.N_v)])
     # plt.plot(v_arr, spectrum_h)
     # plt.show()
@@ -825,10 +831,10 @@ def start():
     #-----------------------------------------------------
 
     # NOTE: Please make sure you change the limits on line 1161-2 and specify the waverange corresponding to the dataset being used
-    dir_path = '/home/pankaj/radis-lab/data-1750-1850/'
+    dir_path = '/home/pankaj/radis-lab/data-2000-2400/'
 
-    init_params_h.v_min = 1750.0
-    init_params_h.v_max = 1850.0
+    init_params_h.v_min = 2000.0
+    init_params_h.v_max = 2400.0
     init_params_h.dv = 0.002
     init_params_h.N_v = int((init_params_h.v_max - init_params_h.v_min)/init_params_h.dv)
 
@@ -961,12 +967,11 @@ def start():
     dT = 500
 
     v_arr = np.array([init_params_h.v_min + i * init_params_h.dv for i in range(init_params_h.N_v)])
-    #spectrum_h = iterate(p, 1000, spectrum_h, host_params_h_v0_dec, host_params_h_da_dec)
-    #print("spectrum in start function: ", spectrum_h[0])
-    #plt.plot(v_arr, spectrum_h, "-")
-    for T in range(T_min, T_max, dT):
+    for T in range(1000, 1001, dT):
         spectrum_h = iterate(p, T, spectrum_h, host_params_h_v0_dec, host_params_h_da_dec)
         plt.semilogy(v_arr, spectrum_h, "-")
+
+    
 
     plt.xlim(init_params_h.v_max, init_params_h.v_min)
     plt.show()
