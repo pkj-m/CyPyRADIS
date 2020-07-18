@@ -77,7 +77,8 @@ host_params_h_DLM_d_out = None
 host_params_h_spectrum_d_in = None
 host_params_h_spectrum_d_out = None
 
-
+#set default path:
+database_path = '/home/pankaj/radis-lab/data-2000-2400/'
 
 class initData(ctypes.Structure):
     _fields_= [
@@ -341,6 +342,11 @@ def read_npy(fname, arr):
     print("Loading {0}...".format(fname))
     arr = np.load(fname)
     print("Done!")
+    
+    
+def set_path(path):
+    global database_path
+    database_path = path
 
 # CUSTOM COMPARATOR to sort map keys in non increasing order
 cdef extern from *:
@@ -828,10 +834,11 @@ def start():
     global host_params_h_DLM_d_in
     global host_params_h_spectrum_d_in
     global cuda_module
+    global database_path
     #-----------------------------------------------------
 
     # NOTE: Please make sure you change the limits on line 1161-2 and specify the waverange corresponding to the dataset being used
-    dir_path = '/home/pankaj/radis-lab/data-2000-2400/'
+    
 
     init_params_h.v_min = 2000.0
     init_params_h.v_max = 2400.0
@@ -869,12 +876,12 @@ def start():
     init_params_h.Max_lines = int(2.4E8)
 
     print("Loading v0.npy...")
-    cdef np.ndarray[dtype=np.float32_t, ndim=1] v0 = np.load(dir_path+'v0.npy')
+    cdef np.ndarray[dtype=np.float32_t, ndim=1] v0 = np.load(database_path+'v0.npy')
     print("Done!")
     cdef np.ndarray[dtype=np.float32_t, ndim=1] spec_h_v0 = v0
     
     print("Loading da.npy...")
-    cdef np.ndarray[dtype=np.float32_t, ndim=1] da = np.load(dir_path+'da.npy')
+    cdef np.ndarray[dtype=np.float32_t, ndim=1] da = np.load(database_path+'da.npy')
     print("Done!")
     cdef np.ndarray[dtype=np.float32_t, ndim=1] spec_h_da = da
 
@@ -892,12 +899,12 @@ def start():
     # wL inits
     print("Init wL: ")
     print("Loading log_2gs.npy...")
-    cdef np.ndarray[dtype=np.float32_t, ndim=1] log_2gs = np.load(dir_path+'log_2gs.npy')
+    cdef np.ndarray[dtype=np.float32_t, ndim=1] log_2gs = np.load(database_path+'log_2gs.npy')
     cdef np.ndarray[dtype=np.float32_t, ndim=1] spec_h_log_2gs = log_2gs
     print("Done!")
 
     print("Loading na.npy...")
-    cdef np.ndarray[dtype=np.float32_t, ndim=1] na = np.load(dir_path+'na.npy')
+    cdef np.ndarray[dtype=np.float32_t, ndim=1] na = np.load(database_path+'na.npy')
     cdef np.ndarray[dtype=np.float32_t, ndim=1] spec_h_na = na
     print("Done!")
     init_lorentzian_params(log_2gs, na)
@@ -906,7 +913,7 @@ def start():
     # wG inits:
     print("Init wG: ")
     print("Loading log_2vMm.npy...")
-    cdef np.ndarray[dtype=np.float32_t, ndim=1] log_2vMm = np.load(dir_path+'log_2vMm.npy')
+    cdef np.ndarray[dtype=np.float32_t, ndim=1] log_2vMm = np.load(database_path+'log_2vMm.npy')
     cdef np.ndarray[dtype=np.float32_t, ndim=1] spec_h_log_2vMm = log_2vMm
     print("Done!")
     init_gaussian_params(log_2vMm)
@@ -915,12 +922,12 @@ def start():
     # I inits:
     print("Init I: ")
     print("Loading S0.npy...")
-    cdef np.ndarray[dtype=np.float32_t, ndim=1] S0 = np.load(dir_path+'S0.npy')
+    cdef np.ndarray[dtype=np.float32_t, ndim=1] S0 = np.load(database_path+'S0.npy')
     cdef np.ndarray[dtype=np.float32_t, ndim=1] spec_h_S0 = S0
     print("Done!")
 
     print("Loading El.npy...")
-    cdef np.ndarray[dtype=np.float32_t, ndim=1] El = np.load(dir_path+'El.npy')
+    cdef np.ndarray[dtype=np.float32_t, ndim=1] El = np.load(database_path+'El.npy')
     cdef np.ndarray[dtype=np.float32_t, ndim=1] spec_h_El = El
     print("Done!")
     print()
