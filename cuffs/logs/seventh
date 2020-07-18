@@ -1,0 +1,60 @@
+>>> import py_cuffs
+>>> py_cuffs.start()
+
+Spectral points per block  : 42
+Threads per block          : 1024
+Spectral points per thread : 0
+
+Init v : 
+Loading v0.npy...
+Done!
+Loading da.npy...
+Done!
+
+Init wL: 
+Loading log_2gs.npy...
+Done!
+Loading na.npy...
+Done!
+Initializing Lorentzian parameters  (from cache)... 
+Done!
+
+Init wG: 
+Loading log_2vMm.npy...
+Done!
+Initializing Gaussian parameters (from cache)... 
+Done!
+
+Init I: 
+Loading S0.npy...
+Done!
+Loading El.npy...
+Done!
+
+Number of lines loaded: 55581120
+
+Allocating device memory...
+Done!
+Copying data to device... 
+sizeof p: 64
+Traceback (most recent call last):
+  File "/home/pankaj/anaconda3/lib/python3.7/site-packages/numpy/core/_internal.py", line 600, in _dtype_from_pep3118
+    dtype, align = __dtype_from_pep3118(stream, is_subdtype=False)
+  File "/home/pankaj/anaconda3/lib/python3.7/site-packages/numpy/core/_internal.py", line 675, in __dtype_from_pep3118
+    .format(stream.next, desc))
+NotImplementedError: Unrepresentable PEP 3118 data type '&' (pointers)
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "<stdin>", line 1, in <module>
+  File "py_cuffs.pyx", line 1323, in py_cuffs.start
+    host_params_h_v0_d =        cp.array(spec_h.v0)
+  File "/home/pankaj/anaconda3/lib/python3.7/site-packages/cupy/creation/from_data.py", line 43, in array
+    return core.array(obj, dtype, copy, order, subok, ndmin)
+  File "cupy/core/core.pyx", line 1985, in cupy.core.core.array
+  File "cupy/core/core.pyx", line 2064, in cupy.core.core.array
+  File "cupy/core/core.pyx", line 2131, in cupy.core.core._send_object_to_gpu
+ValueError: '&<f' is not a valid PEP 3118 buffer format string
+>>> 
+

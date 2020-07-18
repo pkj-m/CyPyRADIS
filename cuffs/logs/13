@@ -1,0 +1,100 @@
+>>> import py_cuffs
+>>> py_cuffs.start()
+
+Spectral points per block  : 42
+Threads per block          : 1024
+Spectral points per thread : 0
+
+Init v : 
+Loading v0.npy...
+Done!
+Loading da.npy...
+Done!
+
+Init wL: 
+Loading log_2gs.npy...
+Done!
+Loading na.npy...
+Done!
+Initializing Lorentzian parameters  (from cache)... 
+Done!
+
+Init wG: 
+Loading log_2vMm.npy...
+Done!
+Initializing Gaussian parameters (from cache)... 
+Done!
+
+Init I: 
+Loading S0.npy...
+Done!
+Loading El.npy...
+Done!
+
+Number of lines loaded: 55581120
+
+Allocating device memory...
+Done!
+Copying data to device... 
+sizeof p: 64
+copied init_params_h data to device
+Done!
+Press any key to start iterations...
+
+checkpoint -1...
+checkpoint 0...
+checkpoint 0.1...
+checkpoint 0.2...
+checkpoint 0.3...
+checkpoint 1...
+sizeof p: 32808
+checkpoint 2...
+Getting ready...
+checkpoint 3...
+checkpoint 4...
+<<<LAUNCHED>>> 
+checkpoint 5...
+printing host_params_h_DLM_d_in: 
+[0. 0. 0. ... 0. 0. 0.]
+enter 1 to continue, 0 to exit..
+1
+host_params_h_DLM_d_out: 
+[18952808.         +0.j  -1231350.5 -12375860.j   -623374.06 +1330509.5j
+ ...   338250.44 +1094362.2j   887502.    -331486.j
+  -335291.         +0.j ]
+checkpoint 6...
+checkpoint 7...
+checkpoint 8...
+host_params_h_spectrum_d_out: 
+[ 7.6345563  6.01224    4.381226  ... 12.208287  10.672991   9.178952 ]
+checkpoint 9...
+checkpoint 10...
+checkpoint 11...
+obtained spectrum_h...
+[ 7.6345563  6.01224    4.381226  ... 12.208287  10.672991   9.178952 ]
+Traceback (most recent call last):
+  File "/home/pankaj/anaconda3/lib/python3.7/site-packages/matplotlib/pyplot.py", line 2795, in plot
+    is not None else {}), **kwargs)
+  File "/home/pankaj/anaconda3/lib/python3.7/site-packages/matplotlib/axes/_axes.py", line 1666, in plot
+    lines = [*self._get_lines(*args, data=data, **kwargs)]
+  File "/home/pankaj/anaconda3/lib/python3.7/site-packages/matplotlib/axes/_base.py", line 225, in __call__
+    yield from self._plot_args(this, kwargs)
+  File "/home/pankaj/anaconda3/lib/python3.7/site-packages/matplotlib/axes/_base.py", line 391, in _plot_args
+    x, y = self._xy_from_xy(x, y)
+  File "/home/pankaj/anaconda3/lib/python3.7/site-packages/matplotlib/axes/_base.py", line 270, in _xy_from_xy
+    "have shapes {} and {}".format(x.shape, y.shape))
+ValueError: x and y must have same first dimension, but have shapes (49999,) and (199998,)
+Exception ignored in: 'py_cuffs.iterate'
+Traceback (most recent call last):
+  File "/home/pankaj/anaconda3/lib/python3.7/site-packages/matplotlib/pyplot.py", line 2795, in plot
+    is not None else {}), **kwargs)
+  File "/home/pankaj/anaconda3/lib/python3.7/site-packages/matplotlib/axes/_axes.py", line 1666, in plot
+    lines = [*self._get_lines(*args, data=data, **kwargs)]
+  File "/home/pankaj/anaconda3/lib/python3.7/site-packages/matplotlib/axes/_base.py", line 225, in __call__
+    yield from self._plot_args(this, kwargs)
+  File "/home/pankaj/anaconda3/lib/python3.7/site-packages/matplotlib/axes/_base.py", line 391, in _plot_args
+    x, y = self._xy_from_xy(x, y)
+  File "/home/pankaj/anaconda3/lib/python3.7/site-packages/matplotlib/axes/_base.py", line 270, in _xy_from_xy
+    "have shapes {} and {}".format(x.shape, y.shape))
+ValueError: x and y must have same first dimension, but have shapes (49999,) and (199998,)
+
