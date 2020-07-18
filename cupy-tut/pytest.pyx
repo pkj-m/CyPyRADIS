@@ -18,36 +18,13 @@ __global__ void test_sum(complex<float>* y, complex<float>* rx, complex<float>* 
     }
 }
 
-__global__ void add_array(float *a, float adder, int N){
-    unsigned int tid = blockDim.x * blockIdx.x + threadIdx.x;
-    if (tid < N){
-        a[tid] += adder;
-    }
-}
-
 
 }'''
 
 ################## GPU PART ######################
 
-module = cp.RawModule(code=loaded_from_source)
-ker_sum = module.get_function('add_array')
-
-cdef cp.ndarray[dtype=cp.float32_t, ndim = 2] test_array = cp.zeros((5,5), dtype=cp.float32)
-
-for i in range(5):
-    for j in range(5):
-        test_array[i][j] = 5*i + j
-
-
-print("test array before launch:")
-print(test_array)
-adder = cp.float32(5.5)
-
-ker_sum((5,), (5,), (test_array, adder, 25))
-
-print("\n<<<LAUNCHED>>>\n")
-print(test_array)
+# module = cp.RawModule(code=loaded_from_source)
+# ker_sum = module.get_function('test_sum')
 
 
 # rx = cp.arange(25, dtype=cp.complex64)
