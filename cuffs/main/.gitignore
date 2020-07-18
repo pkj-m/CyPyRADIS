@@ -2,6 +2,11 @@
 *.pyc
 *.pyd
 *.so
+*.dat
+*.c
+*.cpp
+*.html
+build.bat
 
 # Setuptools distribution folder.
 /build/
