@@ -16,7 +16,6 @@ import ctypes
 from matplotlib import pyplot as plt
 import cupyx
 import cupyx.scipy.fftpack
-import mplcyberpunk
 
 
 cdef float epsilon = 0.0001
@@ -789,14 +788,15 @@ cdef np.ndarray[dtype=np.float32_t, ndim=1] iterate(float p, float T,
 
     spectrum_h = spectrum_h_pre[:init_params_h.N_v]
     spectrum_h = spectrum_h * float(init_params_h.N_v) * 2
-    cnt = 0
-    spectrum_h = np.flip(spectrum_h)
-    with open("test_file_spectrum_16_july_3.txt", 'w') as f:
-        for i in spectrum_h:
-            f.write("%s\n" % str(i))
-            cnt += 1
-            if cnt == 10000:
-                break
+    
+    # cnt = 0
+    # spectrum_h = np.flip(spectrum_h)
+    # with open("test_file_spectrum_16_july_3.txt", 'w') as f:
+    #     for i in spectrum_h:
+    #         f.write("%s\n" % str(i))
+    #         cnt += 1
+    #         if cnt == 10000:
+    #             break
     
     #print("spectrum in iterate function: ", spectrum_h[0])
     # v_arr = np.array([init_params_h.v_min + i * init_params_h.dv for i in range(init_params_h.N_v)])
@@ -967,7 +967,7 @@ def start():
     dT = 500
 
     v_arr = np.array([init_params_h.v_min + i * init_params_h.dv for i in range(init_params_h.N_v)])
-    for T in range(1000, 1001, dT):
+    for T in range(T_min, T_max, dT):
         spectrum_h = iterate(p, T, spectrum_h, host_params_h_v0_dec, host_params_h_da_dec)
         plt.semilogy(v_arr, spectrum_h, "-")
 
@@ -977,7 +977,7 @@ def start():
     plt.show()
 
     cp._default_memory_pool.free_all_blocks()
-
+    
     #Cleanup and go home:
 	#cudaEventDestroy(host_params_h_start);
 	#cudaEventDestroy(host_params_h_start_DLM);
