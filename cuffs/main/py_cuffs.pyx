@@ -16,6 +16,7 @@ import ctypes
 from matplotlib import pyplot as plt
 import cupyx
 import cupyx.scipy.fftpack
+import cython
 
 
 cdef float epsilon = 0.0001
@@ -367,6 +368,12 @@ cdef extern from *:
         float a
         float b
 
+
+@cython.cdivision(True)
+@cython.boundscheck(False)
+@cython.wraparound(False)
+@cython.nonecheck(False)
+
 cdef void init_lorentzian_params(np.ndarray[dtype=np.float32_t, ndim=1] log_2gs, np.ndarray[dtype=np.float32_t, ndim=1] na):
 
     # ----------- setup global variables -----------------
@@ -379,6 +386,9 @@ cdef void init_lorentzian_params(np.ndarray[dtype=np.float32_t, ndim=1] log_2gs,
     #------------------------------------------------------
 
     cdef set[pair[float,float]] unique_set
+    cdef float float_pair[2]
+    
+    
     cdef vector[pair[float,float]] duplicates_removed
     cdef vector[float] na_short
     cdef vector[float] log_2gs_short
@@ -399,6 +409,9 @@ cdef void init_lorentzian_params(np.ndarray[dtype=np.float32_t, ndim=1] log_2gs,
     cdef int bottom_size = 0
 
     fname = "Lorenzian_minmax_" + str(len(log_2gs)) + ".dat"
+
+    cdef unsigned int i,na_len
+    cdef float na_i, log_2gs_i
 
     try:
         with open(fname, 'rb') as f:
@@ -427,14 +440,25 @@ cdef void init_lorentzian_params(np.ndarray[dtype=np.float32_t, ndim=1] log_2gs,
     except:
         print(" ... ", end="\n")
 
-        for i in range(len(na)):
-            unique_set.insert({na[i], log_2gs[i]})
+        na_len = na.size
+        for i in range(na_len):
+            # Somewhat of a hack; all of the structs I tried show Python interaction
+            # when storing values. float[2] didn't have this problem, so I fill the
+            # float[2] array, and then convert the float* pointer to a const 
+            # pair[float,float]* pointer, which is then dereferenced by the [0].
+            # well it gets the job done I suppose, there are no yellow lines inside 
+            # of this loop anymore.
+            
+            float_pair[0] = na[i]
+            float_pair[1] = log_2gs[i]
+            unique_set.insert((<const pair[float,float]*>float_pair)[0])
         
         duplicates_removed.assign(unique_set.begin(), unique_set.end())
 
-        for i, j in duplicates_removed:
-            na_short.push_back(i)
-            log_2gs_short.push_back(j)
+        
+        for na_i, log_2gs_i in duplicates_removed:
+            na_short.push_back(na_i)
+            log_2gs_short.push_back(log_2gs_i)
 
         for i in range(len(na_short)):
             na_i = na_short[i]

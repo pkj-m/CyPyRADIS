@@ -4,13 +4,13 @@ import matplotlib.pyplot as plt
 import cupy as cp
 from matplotlib.widgets import Slider, Button, RadioButtons
 
-v_min,v_max = 2000.0,2400.0 #cm-1
+v_min,v_max = 1800.0,2400.0 #cm-1
 dv = 0.002 #cm-1
 v_arr = np.arange(v_min,v_max,dv)
 NwG, NwL = 4, 8
 
 py_cuffs.set_path('C:/CDSD4000/npy/')
-py_cuffs.set_N_lines(int(2.4E7))
+py_cuffs.set_N_lines(int(2.3E8))
 py_cuffs.init(v_arr,NwG,NwL)
 
 p = 0.1 #bar
