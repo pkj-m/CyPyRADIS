@@ -199,7 +199,7 @@ __global__ void fillDLM(
 	int DLM_offset = iter_params_d.blocks[block_id].iv_offset * init_params_d.N_wG_x_N_wL;
 	int iv_offset = iter_params_d.blocks[block_id].iv_offset;
 
-	int NwG = init_params_d.N_wG;
+	int NwL = init_params_d.N_wL;
 	int NwGxNwL = init_params_d.N_wG_x_N_wL;
 
 	////Allocate and zero the Shared memory
@@ -258,14 +258,14 @@ __global__ void fillDLM(
 				float Iv0 = I_add * (1 - av);
 				float Iv1 = I_add * av;
 
-				atomicAdd(&DLM[iwG0 + iwL0 * NwG + iv0 * NwGxNwL], aV00 * Iv0);
-				atomicAdd(&DLM[iwG0 + iwL0 * NwG + iv1 * NwGxNwL], aV00 * Iv1);
-				atomicAdd(&DLM[iwG0 + iwL1 * NwG + iv0 * NwGxNwL], aV01 * Iv0);
-				atomicAdd(&DLM[iwG0 + iwL1 * NwG + iv1 * NwGxNwL], aV01 * Iv1); 
-				atomicAdd(&DLM[iwG1 + iwL0 * NwG + iv0 * NwGxNwL], aV10 * Iv0);
-				atomicAdd(&DLM[iwG1 + iwL0 * NwG + iv1 * NwGxNwL], aV10 * Iv1);
-				atomicAdd(&DLM[iwG1 + iwL1 * NwG + iv0 * NwGxNwL], aV11 * Iv0);
-				atomicAdd(&DLM[iwG1 + iwL1 * NwG + iv1 * NwGxNwL], aV11 * Iv1);
+				atomicAdd(&DLM[iwL0 + iwG0 * NwL + iv0 * NwGxNwL], aV00 * Iv0);
+				atomicAdd(&DLM[iwL0 + iwG0 * NwL + iv1 * NwGxNwL], aV00 * Iv1);
+				atomicAdd(&DLM[iwL0 + iwG1 * NwL + iv0 * NwGxNwL], aV01 * Iv0);
+				atomicAdd(&DLM[iwL0 + iwG1 * NwL + iv1 * NwGxNwL], aV01 * Iv1); 
+				atomicAdd(&DLM[iwL1 + iwG0 * NwL + iv0 * NwGxNwL], aV10 * Iv0);
+				atomicAdd(&DLM[iwL1 + iwG0 * NwL + iv1 * NwGxNwL], aV10 * Iv1);
+				atomicAdd(&DLM[iwL1 + iwG1 * NwL + iv0 * NwGxNwL], aV11 * Iv0);
+				atomicAdd(&DLM[iwL1 + iwG1 * NwL + iv1 * NwGxNwL], aV11 * Iv1);
 			}
 		}
 	} 
@@ -291,7 +291,7 @@ __global__ void applyLineshapes(complex<float>* DLM, complex<float>* spectrum) {
 			wG = expf(iter_params_d.log_wG_min + iwG * iter_params_d.log_dwG);
 			for (int iwL = 0; iwL < init_params_d.N_wL; iwL++) {
 				//index = iwG + iwL * init_params_d.N_wG + iv * init_params_d.N_wG_x_N_wL;
-                index = iv + iwL * (init_params_d.N_v+1) + iwG * init_params_d.N_wL * (init_params_d.N_v+1);
+                index = iv + iwG * (init_params_d.N_v+1) + iwL * init_params_d.N_wG * (init_params_d.N_v+1);
 				wL = expf(iter_params_d.log_wL_min + iwL * iter_params_d.log_dwL);
 				mul = expf(-r4log2 * powf(pi * x * wG, 2) - pi * x * wL);
                 out_complex += mul* DLM[index];
@@ -849,7 +849,7 @@ def init(v_arr,N_wG,N_wL):
 
     print("Allocating device memory and copying data...")
 
-    host_params_h_DLM_d_in = cp.zeros((2 * init_params_h.N_v, init_params_h.N_wL, init_params_h.N_wG), order='C', dtype=cp.float32)
+    host_params_h_DLM_d_in = cp.zeros((2 * init_params_h.N_v, init_params_h.N_wG, init_params_h.N_wL), order='C', dtype=cp.float32)
     host_params_h_spectrum_d_in = cp.zeros(init_params_h.N_v + 1, dtype=cp.complex64)
     
     print("Copying init_params to device...")
