@@ -19,9 +19,9 @@ import cupyx.scipy.fftpack
 import cython
 
 
-cdef float epsilon = 0.0001
-cdef float FLOAT_MAX =  1e30
-cdef float FLOAT_MIN = -1e30
+cdef float epsilon   = <float> 0.0001
+cdef float FLOAT_MAX = <float> 1e30
+cdef float FLOAT_MIN = <float>-1e30
 
 
 cdef  int host_params_h_block_preparation_step_size
@@ -38,7 +38,7 @@ cdef  vector[float] host_params_h_bottom_x
 cdef  vector[float] host_params_h_bottom_a
 cdef  vector[float] host_params_h_bottom_b
 
-cdef  int host_params_h_dec_size
+cdef  size_t host_params_h_dec_size
 
 cdef  int host_params_h_shared_size
 
@@ -318,8 +318,8 @@ cdef void set_pT(float p, float T):
     global iter_params_h
     #------------------------------------------------------
 
-    cdef float c2 = 1.4387773538277204 #K.cm
-    cdef k = 1.38064852e-23 #J.K-1
+    cdef float c2 = <float>1.4387773538277204 #K.cm
+    cdef float k = <float>1.38064852e-23 #J.K-1
     iter_params_h.p = p #bar
     iter_params_h.log_p = np.log(p)
     iter_params_h.hlog_T = 0.5 * np.log(T)
@@ -328,10 +328,10 @@ cdef void set_pT(float p, float T):
     iter_params_h.N = p*1e5 / (1e6 * k * T) #cm-3
 
     ## TO-DO: These are molecule/isotopologue specific params and should not be compiled
-    cdef float B  =    0.3902 #cm-1
-    cdef float w1 = 1354.31 #cm-1
-    cdef float w2 =  672.85 #cm-1
-    cdef float w3 = 2396.32 #cm-1
+    cdef float B  = <float>     0.3902 #cm-1
+    cdef float w1 = <float>  1354.31 #cm-1
+    cdef float w2 = <float>   672.85 #cm-1
+    cdef float w3 = <float>  2396.32 #cm-1
 
     cdef int d1 = 1
     cdef int d2 = 2
@@ -342,7 +342,7 @@ cdef void set_pT(float p, float T):
     cdef float Tv12 = T
     cdef float Tv3  = T
     
-    cdef float Qr = gr * Trot/(c2 * B)*np.exp(c2*B/(3*Trot)) #McDowell 1978
+    cdef float Qr = gr * Trot/(c2 * B)*np.exp(c2*B/(<float>3.0*Trot)) #McDowell 1978
     cdef float Qv1 = 1 / np.power(1 - np.exp(-c2 * w1 / Tv12), d1)
     cdef float Qv2 = 1 / np.power(1 - np.exp(-c2 * w2 / Tv12), d2)
     cdef float Qv3 = 1 / np.power(1 - np.exp(-c2 * w3 / Tv3 ), d3)
@@ -412,8 +412,8 @@ cdef void init_lorentzian_params(np.ndarray[dtype=np.float32_t, ndim=1] log_2gs,
 
     print("Initializing Lorentzian parameters ", end = "")
 
-    cdef int top_size = 0
-    cdef int bottom_size = 0
+    cdef size_t top_size = 0
+    cdef size_t bottom_size = 0
 
     fname = "Lorenzian_minmax_" + str(len(log_2gs)) + ".dat"
 
@@ -800,7 +800,7 @@ def init(v_arr,N_wG,N_wL):
     for i in range(0, len(v0)//init_params_h.N_threads_per_block):
         host_params_h_v0_dec[i] = v0[i * init_params_h.N_threads_per_block]
 
-    host_params_h_dec_size = len(host_params_h_v0_dec)
+    host_params_h_dec_size = host_params_h_v0_dec.size
     
     host_params_h_da_dec = np.zeros(len(v0)//init_params_h.N_threads_per_block, dtype=np.float32)
     
