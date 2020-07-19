@@ -121,7 +121,8 @@ class iterData(ctypes.Structure):
         ("hlog_T", ctypes.c_float),
         ("log_rT", ctypes.c_float),
         ("c2T", ctypes.c_float),
-        ("rQ", ctypes.c_float),
+        ("N", ctypes.c_float),
+        ("Q", ctypes.c_float),
 
         ("log_wG_min", ctypes.c_float),
         ("log_wL_min", ctypes.c_float),
@@ -169,7 +170,8 @@ struct iterData {
 	float hlog_T;
 	float log_rT;
 	float c2T;
-	float rQ;
+    float N;
+	float Q;
 	float log_wG_min;
 	float log_wL_min;
 	float log_dwG;
@@ -242,7 +244,7 @@ __global__ void fillDLM(
                 //arr_idx[i] = iwL0;
 
 				//Calc I
-				float I_add = iter_params_d.rQ * S0[i] * (expf(iter_params_d.c2T * El[i]) - expf(iter_params_d.c2T * (El[i] + v0[i])));
+				float I_add = iter_params_d.N * S0[i] * (expf(iter_params_d.c2T * El[i]) - expf(iter_params_d.c2T * (El[i] + v0[i]))) / logf(10) / iter_params_d.Q;
 
 				float av = iv - iv0;
 				float awG = (iwG - iwG0) * expf((iwG1 - iwG) * iter_params_d.log_dwG);
@@ -293,8 +295,7 @@ __global__ void applyLineshapes(complex<float>* DLM, complex<float>* spectrum) {
 				wL = expf(iter_params_d.log_wL_min + iwL * iter_params_d.log_dwL);
 				mul = expf(-r4log2 * powf(pi * x * wG, 2) - pi * x * wL);
                 out_complex += mul* DLM[index];
-				// out_re += mul * DLM[index].x;   
-				// out_im += mul * DLM[index].y;
+                //out_complex += DLM[index];
 			}
 		}
         complex<float> temp(out_complex.real(), out_complex.imag());
@@ -317,31 +318,37 @@ cdef void set_pT(float p, float T):
     global iter_params_h
     #------------------------------------------------------
 
-    cdef float c2 = 1.4387773538277204
-    iter_params_h.p = p
+    cdef float c2 = 1.4387773538277204 #K.cm
+    cdef k = 1.38064852e-23 #J.K-1
+    iter_params_h.p = p #bar
     iter_params_h.log_p = np.log(p)
     iter_params_h.hlog_T = 0.5 * np.log(T)
     iter_params_h.log_rT = np.log(296.0/T)
     iter_params_h.c2T = -c2/T
+    iter_params_h.N = p*1e5 / (1e6 * k * T) #cm-3
 
-    cdef float B = 0.39
-    cdef float w1 = 1388.0
-    cdef float w2 = 667.0
-    cdef float w3 = 1349.0
+    ## TO-DO: These are molecule/isotopologue specific params and should not be compiled
+    cdef float B  =    0.3902 #cm-1
+    cdef float w1 = 1354.31 #cm-1
+    cdef float w2 =  672.85 #cm-1
+    cdef float w3 = 2396.32 #cm-1
 
     cdef int d1 = 1
     cdef int d2 = 2
     cdef int d3 = 1
+    cdef float gr = 0.5
 
-    cdef float Qr = T/(c2 * B)
-    cdef float Qv1 = 1 / np.power(1 - np.exp(-c2 * w1 / T), d1)
-    cdef float Qv2 = 1 / np.power(1 - np.exp(-c2 * w2 / T), d2)
-    cdef float Qv3 = 1 / np.power(1 - np.exp(-c2 * w3 / T), d3)
+    cdef float Trot = T
+    cdef float Tv12 = T
+    cdef float Tv3  = T
+    
+    cdef float Qr = gr * Trot/(c2 * B)*np.exp(c2*B/(3*Trot)) #McDowell 1978
+    cdef float Qv1 = 1 / np.power(1 - np.exp(-c2 * w1 / Tv12), d1)
+    cdef float Qv2 = 1 / np.power(1 - np.exp(-c2 * w2 / Tv12), d2)
+    cdef float Qv3 = 1 / np.power(1 - np.exp(-c2 * w3 / Tv3 ), d3)
     cdef float Q = Qr * Qv1 * Qv2 * Qv3;
 
-    iter_params_h.rQ = 1 / Q
-    iter_params_h.rQ = iter_params_h.rQ / T
-
+    iter_params_h.Q = Q
 
 def read_npy(fname, arr):
     print("Loading {0}...".format(fname))
@@ -734,6 +741,7 @@ def init(v_arr,N_wG,N_wL):
     global host_params_h_log_2vMm_d
     global host_params_h_DLM_d_in
     global host_params_h_spectrum_d_in
+    
 
     global cuda_module
     global database_path
@@ -889,6 +897,7 @@ def iterate(float p, float T):
     global cuda_module
     global host_params_h_v0_dec
     global host_params_h_da_dec
+    global DLM
     #------------------------------------------------------
 
     #host_params_h_start.record()
@@ -925,7 +934,14 @@ def iterate(float p, float T):
 		host_params_h_log_2vMm_d,
 		host_params_h_DLM_d_in
         ))
-
+        
+    cp.cuda.runtime.deviceSynchronize()
+    
+    #This makes the DLM array available in the calling module
+    DLM = cp.asnumpy(host_params_h_DLM_d_in)
+    #DLM /= 0.8816117 #difference between current code and benchmark.
+    #host_params_h_DLM_d_in = cp.asarray(DLM)
+    
     #host_params_h_stop_DLM.record()
     #cp.cuda.runtime.eventSynchronize(host_params_h_stop_DLM_ptr)
     #host_params_h_elapsedTimeDLM = cp.cuda.get_elapsed_time(host_params_h_start_DLM, host_params_h_stop_DLM)
@@ -961,7 +977,7 @@ def iterate(float p, float T):
     host_params_h_spectrum_d_out = cp.fft.irfft(host_params_h_spectrum_d_in)
     cp.cuda.runtime.deviceSynchronize()
 
-    spectrum_h_pre = host_params_h_spectrum_d_out.get() 
+    spectrum_h = host_params_h_spectrum_d_out.get()[:init_params_h.N_v] / init_params_h.dv 
     # with open("test_file.txt", 'w') as f:
     #     for i in spectrum_h_pre:
     #         f.write("%s\n" % str(i))
@@ -969,9 +985,6 @@ def iterate(float p, float T):
     #host_params_h_stop.record()
     cp.cuda.runtime.eventSynchronize(host_params_h_stop_ptr)
     #host_params_h_elapsedTime = cp.cuda.get_elapsed_time(host_params_h_start, host_params_h_stop)
-
-    spectrum_h = spectrum_h_pre[:init_params_h.N_v]
-    spectrum_h = spectrum_h * float(init_params_h.N_v) * 2
     
     # cnt = 0
     # spectrum_h = np.flip(spectrum_h)

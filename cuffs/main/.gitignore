@@ -7,6 +7,7 @@
 *.cpp
 *.html
 build.bat
+CO2_hitemp.npy
 
 # Setuptools distribution folder.
 /build/
