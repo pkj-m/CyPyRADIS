@@ -708,7 +708,7 @@ cdef int prepare_blocks():
             #print("inside second if...\n")
             if (v_cur > v_max) : 
                 #print("inside third if...\n")
-                dvdi = (v_cur - v_prev) / float(step)
+                dvdi = (v_cur - v_prev) / <float>step
                 i -= int(((v_cur - v_max) / dvdi)) + 1
                 v_cur = v0[i] + iter_params_h.p * da[i]
             
