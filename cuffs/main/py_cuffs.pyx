@@ -651,9 +651,6 @@ cdef void calc_gaussian_params():
 
     return
 
-
-
-
 cdef int prepare_blocks():
 
     # ----------- setup global variables -----------------
@@ -682,32 +679,22 @@ cdef int prepare_blocks():
     
     new_block.line_offset = 0
     new_block.iv_offset = int(((v_cur - init_params_h.v_min) / init_params_h.dv))
-
-    #print("entering while loop...")
-
     while True:
-        #print("og i = {0}".format(i), end=" ")
         i += step
-        #print("updated i = {0} | n = {1}".format(i, n), end="\n")
         if i > host_params_h_dec_size:
-            #print("i is greater than host_params_h_dec_size ( = {0} )...".format(host_params_h_dec_size))
             iter_params_h.blocks[n] = new_block
 
             n+=1
-            #print("updated n to {0}".format(n), end="\n")
             new_block.line_offset = i * init_params_h.N_threads_per_block
 
             iter_params_h.blocks[n] = new_block
             break
         
-        #print("not going inside first if...", end="\n")
         v_prev = v_cur
         v_cur = v0[i] + iter_params_h.p * da[i]
         
         if ((v_cur > v_max) or (i >= i_max)) : 
-            #print("inside second if...\n")
             if (v_cur > v_max) : 
-                #print("inside third if...\n")
                 dvdi = (v_cur - v_prev) / <float>step
                 i -= int(((v_cur - v_max) / dvdi)) + 1
                 v_cur = v0[i] + iter_params_h.p * da[i]
@@ -720,9 +707,6 @@ cdef int prepare_blocks():
             i_max = i + init_params_h.Max_iterations_per_thread
     
     return n
-
-# cdef void check_block_spillage(int n_blocks, vector[float] v0, vector[float] da ...):
-#    return
 
 def init(v_arr,N_wG,N_wL):
 
@@ -748,11 +732,8 @@ def init(v_arr,N_wG,N_wL):
     global N_lines_to_load
     #-----------------------------------------------------
 
-    # NOTE: Please make sure you change the limits on line 1161-2 and specify the waverange corresponding to the dataset being used
-    
-
-    init_params_h.v_min = np.min(v_arr)#2000.0
-    init_params_h.v_max = np.max(v_arr)#2400.0
+    init_params_h.v_min = np.min(v_arr) #2000.0
+    init_params_h.v_max = np.max(v_arr) #2400.0
     init_params_h.dv = (v_arr[-1]-v_arr[0])/(len(v_arr)-1) #0.002
     init_params_h.N_v = len(v_arr) #int((init_params_h.v_max - init_params_h.v_min)/init_params_h.dv)
 
@@ -766,7 +747,7 @@ def init(v_arr,N_wG,N_wL):
     host_params_h_shared_size = 0x8000          # Bytes - Size of the shared memory
     host_params_h_Min_threads_per_block = 128   # Ensures a full warp from each of the 4 processors
     host_params_h_Max_threads_per_block = 1024  # Maximum determined by device parameters
-    init_params_h.shared_size_floats = host_params_h_shared_size // 4
+    init_params_h.shared_size_floats = host_params_h_shared_size // 4  # size of float
 
     init_params_h.N_wG_x_N_wL = init_params_h.N_wG * init_params_h.N_wL
     init_params_h.N_total = init_params_h.N_wG_x_N_wL * init_params_h.N_v
@@ -908,22 +889,20 @@ def iterate(float p, float T):
     calc_lorentzian_params()
     n_blocks = prepare_blocks()
 
-    # TODO: once this works, make sure we move definition of host-params-d to main function and just fill it with 0 here
-    
+    print("Copying iteration parameters to device...")    
     memptr_iter_params_d = cuda_module.get_global("iter_params_d")
     iter_params_ptr = ctypes.cast(ctypes.pointer(iter_params_h),ctypes.c_void_p)
     struct_size = ctypes.sizeof(iter_params_h)
     memptr_iter_params_d.copy_from_host(iter_params_ptr,struct_size)
+    print("Done!")
 
 	# Zero DLM:
     host_params_h_DLM_d_in.fill(0)
     host_params_h_spectrum_d_in.fill(0)
 
-    
+    print("Getting ready...")
 
-    #print("Getting ready...")
-
-    fillDLM ((n_blocks,), (init_params_h.N_threads_per_block,), #host_params_h_shared_size 
+    fillDLM ((n_blocks,), (init_params_h.N_threads_per_block,),
         (
 		host_params_h_v0_d,
 		host_params_h_da_d,
@@ -948,13 +927,6 @@ def iterate(float p, float T):
     #print("<<<LAUNCHED>>> ")
 
     cp.cuda.runtime.deviceSynchronize()
-
-    # with open("test_file_host_params_h.txt", 'w') as f:
-    #     for itemx in host_params_h_DLM_d_in:
-    #         for itemy in itemx:
-    #             for itemz in itemy:
-    #                 f.write("%s\n" % str(itemz))
-    
 	# FFT
     # figure out how host_params_h_DLM_d_in points to the same memory location as host_params_h_DLM_d
     
@@ -978,27 +950,11 @@ def iterate(float p, float T):
     cp.cuda.runtime.deviceSynchronize()
 
     spectrum_h = host_params_h_spectrum_d_out.get()[:init_params_h.N_v] / init_params_h.dv 
-    # with open("test_file.txt", 'w') as f:
-    #     for i in spectrum_h_pre:
-    #         f.write("%s\n" % str(i))
 
     #host_params_h_stop.record()
     cp.cuda.runtime.eventSynchronize(host_params_h_stop_ptr)
     #host_params_h_elapsedTime = cp.cuda.get_elapsed_time(host_params_h_start, host_params_h_stop)
-    
-    # cnt = 0
-    # spectrum_h = np.flip(spectrum_h)
-    # with open("test_file_spectrum_16_july_3.txt", 'w') as f:
-    #     for i in spectrum_h:
-    #         f.write("%s\n" % str(i))
-    #         cnt += 1
-    #         if cnt == 10000:
-    #             break
-    
-    #print("spectrum in iterate function: ", spectrum_h[0])
-    # v_arr = np.array([init_params_h.v_min + i * init_params_h.dv for i in range(init_params_h.N_v)])
-    # plt.plot(v_arr, spectrum_h)
-    # plt.show()
+
     #print("[rG = {0}%".format((np.exp(iter_params_h.log_dwG) - 1) * 100), end = " ")
     #print("rL = {0}%]".format((np.exp(iter_params_h.log_dwL) - 1) * 100) )
     #print("Runtime: {0}".format(host_params_h_elapsedTimeDLM))
