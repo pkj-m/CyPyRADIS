@@ -55,10 +55,6 @@ host_params_h_stop_DLM = cp.cuda.Event(host_params_h_stop_DLM_ptr)
 cdef  float host_params_h_elapsedTime
 cdef  float host_params_h_elapsedTimeDLM
 
-# not needed in case of CuPy
-#cdef  cufftHandle host_params_h_plan_DLM
-#cdef  cufftHandle host_params_h_plan_spectrum
-
 host_params_h_v0_d = None
 host_params_h_da_d = None
 host_params_h_S0_d = None
@@ -399,7 +395,7 @@ cdef void init_lorentzian_params(np.ndarray[dtype=np.float32_t, ndim=1] log_2gs,
     cdef vector[pair[float,float]] duplicates_removed
     cdef vector[float] na_short
     cdef vector[float] log_2gs_short
-    cdef mapcpp[float, float, greater] bottom_envelope_map # shiet
+    cdef mapcpp[float, float, greater] bottom_envelope_map
     cdef mapcpp[float, float] top_envelope_map
 
     cdef vector[float] top_a 
@@ -615,7 +611,6 @@ cdef void init_gaussian_params(np.ndarray[dtype=np.float32_t, ndim=1] log_2vMm):
     try:
         lt = pickle.load(open(fname, "rb"))
         print(" (from cache)... ", end="\n")
-        #lt = pickle.load(f)
         log_2vMm_min = lt[0]
         log_2vMm_max = lt[1]
     except (OSError, IOError) as e:
