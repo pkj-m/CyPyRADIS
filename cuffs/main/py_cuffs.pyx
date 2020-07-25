@@ -703,7 +703,15 @@ cdef int prepare_blocks():
     
     return n
 
-def init(v_arr,N_wG,N_wL):
+def init(v_arr,N_wG,N_wL,
+        np.ndarray[dtype=np.float32_t, ndim=1] v0,
+        np.ndarray[dtype=np.float32_t, ndim=1] da,
+        np.ndarray[dtype=np.float32_t, ndim=1] log_2gs,
+        np.ndarray[dtype=np.float32_t, ndim=1] na,
+        np.ndarray[dtype=np.float32_t, ndim=1] log_2vMm,
+        np.ndarray[dtype=np.float32_t, ndim=1] S0,
+        np.ndarray[dtype=np.float32_t, ndim=1] El
+        ):
 
     # ----------- setup global variables -----------------
     global init_params_h
@@ -763,12 +771,12 @@ def init(v_arr,N_wG,N_wL):
     #init_params_h.Max_lines = int(2.4E8) # this is now done with N_lines_to_load; init_params_h.Max_lines is obsolete.
 
     print("Loading v0.npy...")
-    cdef np.ndarray[dtype=np.float32_t, ndim=1] v0 = np.load(database_path+'v0.npy')[-N_lines_to_load:]
+    #cdef np.ndarray[dtype=np.float32_t, ndim=1] v0 = np.load(database_path+'v0.npy')[-N_lines_to_load:]
     print("Done!")
     cdef np.ndarray[dtype=np.float32_t, ndim=1] spec_h_v0 = v0
     
     print("Loading da.npy...")
-    cdef np.ndarray[dtype=np.float32_t, ndim=1] da = np.load(database_path+'da.npy')[-N_lines_to_load:]
+    #cdef np.ndarray[dtype=np.float32_t, ndim=1] da = np.load(database_path+'da.npy')[-N_lines_to_load:]
     print("Done!")
     cdef np.ndarray[dtype=np.float32_t, ndim=1] spec_h_da = da
 
@@ -786,12 +794,12 @@ def init(v_arr,N_wG,N_wL):
     # wL inits
     print("Init wL: ")
     print("Loading log_2gs.npy...")
-    cdef np.ndarray[dtype=np.float32_t, ndim=1] log_2gs = np.load(database_path+'log_2gs.npy')[-N_lines_to_load:]
+    #cdef np.ndarray[dtype=np.float32_t, ndim=1] log_2gs = np.load(database_path+'log_2gs.npy')[-N_lines_to_load:]
     cdef np.ndarray[dtype=np.float32_t, ndim=1] spec_h_log_2gs = log_2gs
     print("Done!")
 
     print("Loading na.npy...")
-    cdef np.ndarray[dtype=np.float32_t, ndim=1] na = np.load(database_path+'na.npy')[-N_lines_to_load:]
+    #cdef np.ndarray[dtype=np.float32_t, ndim=1] na = np.load(database_path+'na.npy')[-N_lines_to_load:]
     cdef np.ndarray[dtype=np.float32_t, ndim=1] spec_h_na = na
     print("Done!")
     init_lorentzian_params(log_2gs, na)
@@ -800,7 +808,7 @@ def init(v_arr,N_wG,N_wL):
     # wG inits:
     print("Init wG: ")
     print("Loading log_2vMm.npy...")
-    cdef np.ndarray[dtype=np.float32_t, ndim=1] log_2vMm = np.load(database_path+'log_2vMm.npy')[-N_lines_to_load:]
+    #cdef np.ndarray[dtype=np.float32_t, ndim=1] log_2vMm = np.load(database_path+'log_2vMm.npy')[-N_lines_to_load:]
     cdef np.ndarray[dtype=np.float32_t, ndim=1] spec_h_log_2vMm = log_2vMm
     print("Done!")
     init_gaussian_params(log_2vMm)
@@ -809,12 +817,12 @@ def init(v_arr,N_wG,N_wL):
     # I inits:
     print("Init I: ")
     print("Loading S0.npy...")
-    cdef np.ndarray[dtype=np.float32_t, ndim=1] S0 = np.load(database_path+'S0.npy')[-N_lines_to_load:]
+    #cdef np.ndarray[dtype=np.float32_t, ndim=1] S0 = np.load(database_path+'S0.npy')[-N_lines_to_load:]
     cdef np.ndarray[dtype=np.float32_t, ndim=1] spec_h_S0 = S0
     print("Done!")
 
     print("Loading El.npy...")
-    cdef np.ndarray[dtype=np.float32_t, ndim=1] El = np.load(database_path+'El.npy')[-N_lines_to_load:]
+    #cdef np.ndarray[dtype=np.float32_t, ndim=1] El = np.load(database_path+'El.npy')[-N_lines_to_load:]
     cdef np.ndarray[dtype=np.float32_t, ndim=1] spec_h_El = El
     print("Done!")
     print()
