@@ -766,67 +766,24 @@ def init(v_arr,N_wG,N_wL,
     print("Spectral points per thread : {0}".format(init_params_h.N_points_per_thread))
     print()
 
-    # init v:
-    print("Init v : ")
-    #init_params_h.Max_lines = int(2.4E8) # this is now done with N_lines_to_load; init_params_h.Max_lines is obsolete.
-
-    print("Loading v0.npy...")
-    #cdef np.ndarray[dtype=np.float32_t, ndim=1] v0 = np.load(database_path+'v0.npy')[-N_lines_to_load:]
-    print("Done!")
-    cdef np.ndarray[dtype=np.float32_t, ndim=1] spec_h_v0 = v0
     
-    print("Loading da.npy...")
-    #cdef np.ndarray[dtype=np.float32_t, ndim=1] da = np.load(database_path+'da.npy')[-N_lines_to_load:]
-    print("Done!")
+    cdef np.ndarray[dtype=np.float32_t, ndim=1] spec_h_v0 = v0
     cdef np.ndarray[dtype=np.float32_t, ndim=1] spec_h_da = da
-
     host_params_h_v0_dec = np.zeros(len(v0)//init_params_h.N_threads_per_block, dtype=np.float32)
     for i in range(0, len(v0)//init_params_h.N_threads_per_block):
         host_params_h_v0_dec[i] = v0[i * init_params_h.N_threads_per_block]
-
     host_params_h_dec_size = host_params_h_v0_dec.size
-    
     host_params_h_da_dec = np.zeros(len(v0)//init_params_h.N_threads_per_block, dtype=np.float32)
-    
     for i in range(0, len(v0)//init_params_h.N_threads_per_block):
         host_params_h_da_dec[i] = da[i * init_params_h.N_threads_per_block]
 
-    # wL inits
-    print("Init wL: ")
-    print("Loading log_2gs.npy...")
-    #cdef np.ndarray[dtype=np.float32_t, ndim=1] log_2gs = np.load(database_path+'log_2gs.npy')[-N_lines_to_load:]
     cdef np.ndarray[dtype=np.float32_t, ndim=1] spec_h_log_2gs = log_2gs
-    print("Done!")
-
-    print("Loading na.npy...")
-    #cdef np.ndarray[dtype=np.float32_t, ndim=1] na = np.load(database_path+'na.npy')[-N_lines_to_load:]
     cdef np.ndarray[dtype=np.float32_t, ndim=1] spec_h_na = na
-    print("Done!")
     init_lorentzian_params(log_2gs, na)
-    print()
-
-    # wG inits:
-    print("Init wG: ")
-    print("Loading log_2vMm.npy...")
-    #cdef np.ndarray[dtype=np.float32_t, ndim=1] log_2vMm = np.load(database_path+'log_2vMm.npy')[-N_lines_to_load:]
     cdef np.ndarray[dtype=np.float32_t, ndim=1] spec_h_log_2vMm = log_2vMm
-    print("Done!")
     init_gaussian_params(log_2vMm)
-    print()
-
-    # I inits:
-    print("Init I: ")
-    print("Loading S0.npy...")
-    #cdef np.ndarray[dtype=np.float32_t, ndim=1] S0 = np.load(database_path+'S0.npy')[-N_lines_to_load:]
     cdef np.ndarray[dtype=np.float32_t, ndim=1] spec_h_S0 = S0
-    print("Done!")
-
-    print("Loading El.npy...")
-    #cdef np.ndarray[dtype=np.float32_t, ndim=1] El = np.load(database_path+'El.npy')[-N_lines_to_load:]
     cdef np.ndarray[dtype=np.float32_t, ndim=1] spec_h_El = El
-    print("Done!")
-    print()
-
     init_params_h.N_lines = int(len(v0))
     print("Number of lines loaded: {0}".format(init_params_h.N_lines))
     print()
@@ -922,22 +879,23 @@ def iterate(float p, float T):
     #This makes the DLM array available in the calling module
     DLM = cp.asnumpy(host_params_h_DLM_d_in)
     #DLM /= 0.8816117 #difference between current code and benchmark.
-    #host_params_h_DLM_d_in = cp.asarray(DLM)
-    
     #host_params_h_stop_DLM.record()
     #cp.cuda.runtime.eventSynchronize(host_params_h_stop_DLM_ptr)
     #host_params_h_elapsedTimeDLM = cp.cuda.get_elapsed_time(host_params_h_start_DLM, host_params_h_stop_DLM)
     #print("<<<LAUNCHED>>> ")
 
     cp.cuda.runtime.deviceSynchronize()
-	# FFT
-    # figure out how host_params_h_DLM_d_in points to the same memory location as host_params_h_DLM_d
-    
+	
+    #FFT
+    print("Performing Fourier transform...", end= " ")
     host_params_h_DLM_d_out = cp.fft.rfft(host_params_h_DLM_d_in, axis = 0) 
+    print("done!")
     
     cp.cuda.runtime.deviceSynchronize()
     cdef int n_threads = 1024
     n_blocks = (init_params_h.N_v + 1) // n_threads + 1
+
+    print("Applying lineshapes...", end = " ")
 
     applyLineshapes (( n_blocks,), (n_threads,), 
     (
@@ -947,12 +905,14 @@ def iterate(float p, float T):
     )
 
     cp.cuda.runtime.deviceSynchronize()
+    print("done!")
 
 	# inverse FFT
+    print("Performing inverse Fourier transform...", end = " ")
     host_params_h_spectrum_d_out = cp.fft.irfft(host_params_h_spectrum_d_in)
     cp.cuda.runtime.deviceSynchronize()
-
-    spectrum_h = host_params_h_spectrum_d_out.get()[:init_params_h.N_v] / init_params_h.dv 
+    print("done!")
+    spectrum_h = host_params_h_spectrum_d_out.get()[:init_params_h.N_v] / init_params_h.dv
 
     #host_params_h_stop.record()
     cp.cuda.runtime.eventSynchronize(host_params_h_stop_ptr)
@@ -963,7 +923,7 @@ def iterate(float p, float T):
     #print("Runtime: {0}".format(host_params_h_elapsedTimeDLM))
     #print(" + {0}".format(host_params_h_elapsedTime - host_params_h_elapsedTimeDLM), end = " ")
     #print(" = {0} ms".format(host_params_h_elapsedTime))
-
+    print("Finished calculating spectrum!")
 
     return spectrum_h
 
