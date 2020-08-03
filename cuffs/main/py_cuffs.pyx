@@ -39,21 +39,15 @@ cdef  vector[float] host_params_h_bottom_a
 cdef  vector[float] host_params_h_bottom_b
 
 cdef  size_t host_params_h_dec_size
-
 cdef  int host_params_h_shared_size
 
-host_params_h_start_ptr = cp.cuda.runtime.eventCreate()
-host_params_h_stop_ptr = cp.cuda.runtime.eventCreate()
-host_params_h_start_DLM_ptr = cp.cuda.runtime.eventCreate()
-host_params_h_stop_DLM_ptr = cp.cuda.runtime.eventCreate()
+host_params_h_start = cp.cuda.Event()
+host_params_h_stop = cp.cuda.Event()
+host_params_h_start_DLM = cp.cuda.Event()
+host_params_h_stop_DLM = cp.cuda.Event()
 
-host_params_h_start = cp.cuda.Event(host_params_h_start_ptr)
-host_params_h_stop = cp.cuda.Event(host_params_h_stop_ptr)
-host_params_h_start_DLM = cp.cuda.Event(host_params_h_start_DLM_ptr)
-host_params_h_stop_DLM = cp.cuda.Event(host_params_h_stop_DLM_ptr)
-
-cdef  float host_params_h_elapsedTime
-cdef  float host_params_h_elapsedTimeDLM
+cdef float host_params_h_elapsedTime
+cdef float host_params_h_elapsedTimeDLM
 
 host_params_h_v0_d = None
 host_params_h_da_d = None
@@ -797,7 +791,6 @@ def init(v_arr,N_wG,N_wL,
     memptr_init_params_d = cuda_module.get_global("init_params_d")
     init_params_ptr = ctypes.cast(ctypes.pointer(init_params_h),ctypes.c_void_p)
     init_params_size = ctypes.sizeof(init_params_h)
-    print('sizeof p:', init_params_size)
     memptr_init_params_d.copy_from_host(init_params_ptr, init_params_size)
     print("Done!")
 
@@ -841,7 +834,7 @@ def iterate(float p, float T):
     global DLM
     #------------------------------------------------------
 
-    #host_params_h_start.record()
+    host_params_h_start.record()
     
     cdef int n_blocks
     set_pT(p, T)
@@ -862,6 +855,8 @@ def iterate(float p, float T):
 
     print("Getting ready...")
 
+    host_params_h_start_DLM.record()
+
     fillDLM ((n_blocks,), (init_params_h.N_threads_per_block,),
         (
 		host_params_h_v0_d,
@@ -879,10 +874,10 @@ def iterate(float p, float T):
     #This makes the DLM array available in the calling module
     DLM = cp.asnumpy(host_params_h_DLM_d_in)
     #DLM /= 0.8816117 #difference between current code and benchmark.
-    #host_params_h_stop_DLM.record()
+    host_params_h_stop_DLM.record()
     #cp.cuda.runtime.eventSynchronize(host_params_h_stop_DLM_ptr)
-    #host_params_h_elapsedTimeDLM = cp.cuda.get_elapsed_time(host_params_h_start_DLM, host_params_h_stop_DLM)
-    #print("<<<LAUNCHED>>> ")
+    host_params_h_elapsedTimeDLM = cp.cuda.get_elapsed_time(host_params_h_start_DLM, host_params_h_stop_DLM)
+    print("<<<LAUNCHED>>> ", end = " ")
 
     cp.cuda.runtime.deviceSynchronize()
 	
@@ -914,15 +909,14 @@ def iterate(float p, float T):
     print("done!")
     spectrum_h = host_params_h_spectrum_d_out.get()[:init_params_h.N_v] / init_params_h.dv
 
-    #host_params_h_stop.record()
-    cp.cuda.runtime.eventSynchronize(host_params_h_stop_ptr)
-    #host_params_h_elapsedTime = cp.cuda.get_elapsed_time(host_params_h_start, host_params_h_stop)
+    host_params_h_stop.record()
+    host_params_h_elapsedTime = cp.cuda.get_elapsed_time(host_params_h_start, host_params_h_stop)
 
-    #print("[rG = {0}%".format((np.exp(iter_params_h.log_dwG) - 1) * 100), end = " ")
-    #print("rL = {0}%]".format((np.exp(iter_params_h.log_dwL) - 1) * 100) )
-    #print("Runtime: {0}".format(host_params_h_elapsedTimeDLM))
-    #print(" + {0}".format(host_params_h_elapsedTime - host_params_h_elapsedTimeDLM), end = " ")
-    #print(" = {0} ms".format(host_params_h_elapsedTime))
+    print("[rG = {0}%".format((np.exp(iter_params_h.log_dwG) - 1) * 100), end = " ")
+    print("rL = {0}%]".format((np.exp(iter_params_h.log_dwL) - 1) * 100), end = " ")
+    print("Runtime: {0}".format(host_params_h_elapsedTimeDLM), end = "")
+    print(" + {0}".format(host_params_h_elapsedTime - host_params_h_elapsedTimeDLM), end = "")
+    print(" = {0} ms".format(host_params_h_elapsedTime))
     print("Finished calculating spectrum!")
 
     return spectrum_h
