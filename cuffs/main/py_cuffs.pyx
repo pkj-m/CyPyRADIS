@@ -58,6 +58,7 @@ host_params_h_na_d = None
 host_params_h_log_2vMm_d = None
 host_params_h_DLM_d = None
 host_params_h_spectrum_d = None
+host_params_h_I_add = None
 
 # defined in 'iterate'
 host_params_h_DLM_d_in = None
@@ -180,7 +181,8 @@ __global__ void fillDLM(
 	float* log_2gs,
 	float* na,
 	float* log_2vMm,
-	float* global_DLM) {
+	float* global_DLM,
+    float* I_add_arr) {
 
 	// Some overhead for "efficient" block allocation:
 	blockData block = iter_params_d.blocks[blockIdx.x + gridDim.x * blockIdx.y];
@@ -235,6 +237,8 @@ __global__ void fillDLM(
 
 				//Calc I
 				float I_add = iter_params_d.N * S0[i] * (expf(iter_params_d.c2T * El[i]) - expf(iter_params_d.c2T * (El[i] + v0[i]))) / logf(10) / iter_params_d.Q;
+
+                I_add_arr[i] = I_add;
 
 				float av = iv - iv0;
 				float awG = (iwG - iwG0) * expf((iwG1 - iwG) * iter_params_d.log_dwG);
@@ -722,6 +726,7 @@ def init(v_arr,N_wG,N_wL,
     global host_params_h_log_2vMm_d
     global host_params_h_DLM_d_in
     global host_params_h_spectrum_d_in
+    global host_params_h_I_add
     
 
     global cuda_module
@@ -786,6 +791,8 @@ def init(v_arr,N_wG,N_wL,
 
     host_params_h_DLM_d_in = cp.zeros((2 * init_params_h.N_v, init_params_h.N_wG, init_params_h.N_wL), order='C', dtype=cp.float32)
     host_params_h_spectrum_d_in = cp.zeros(init_params_h.N_v + 1, dtype=cp.complex64)
+
+    host_params_h_I_add = cp.zeros(init_params_h.N_lines, dtype=cp.float32)
     
     print("Copying init_params to device...")
     memptr_init_params_d = cuda_module.get_global("init_params_d")
@@ -828,10 +835,13 @@ def iterate(float p, float T):
     global host_params_h_DLM_d_in
     global host_params_h_spectrum_d_in
 
+    global host_params_h_I_add
+
     global cuda_module
     global host_params_h_v0_dec
     global host_params_h_da_dec
     global DLM
+    global I_ADD
     #------------------------------------------------------
 
     host_params_h_start.record()
@@ -853,6 +863,8 @@ def iterate(float p, float T):
     host_params_h_DLM_d_in.fill(0)
     host_params_h_spectrum_d_in.fill(0)
 
+    host_params_h_I_add.fill(0)
+
     print("Getting ready...")
 
     host_params_h_start_DLM.record()
@@ -866,16 +878,18 @@ def iterate(float p, float T):
 		host_params_h_log_2gs_d,
 		host_params_h_na_d,
 		host_params_h_log_2vMm_d,
-		host_params_h_DLM_d_in
+		host_params_h_DLM_d_in,
+        host_params_h_I_add
         ))
         
     cp.cuda.runtime.deviceSynchronize()
     
     #This makes the DLM array available in the calling module
     DLM = cp.asnumpy(host_params_h_DLM_d_in)
+    I_ADD = cp.asnumpy(host_params_h_I_add)
     #DLM /= 0.8816117 #difference between current code and benchmark.
     host_params_h_stop_DLM.record()
-    cp.cuda.runtime.eventSynchronize(host_params_h_stop_DLM)
+    host_params_h_stop_DLM.synchronize()
     host_params_h_elapsedTimeDLM = cp.cuda.get_elapsed_time(host_params_h_start_DLM, host_params_h_stop_DLM)
     print("<<<LAUNCHED>>> ", end = " ")
 
@@ -910,7 +924,7 @@ def iterate(float p, float T):
     spectrum_h = host_params_h_spectrum_d_out.get()[:init_params_h.N_v] / init_params_h.dv
 
     host_params_h_stop.record()
-    cp.cuda.runtime.eventSynchronize(host_params_h_stop)
+    host_params_h_stop.synchronize()
     host_params_h_elapsedTime = cp.cuda.get_elapsed_time(host_params_h_start, host_params_h_stop)
 
     print("[rG = {0}%".format((np.exp(iter_params_h.log_dwG) - 1) * 100), end = " ")
