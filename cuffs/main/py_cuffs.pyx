@@ -39,22 +39,20 @@ cdef  vector[float] host_params_h_bottom_a
 cdef  vector[float] host_params_h_bottom_b
 
 cdef  size_t host_params_h_dec_size
-
 cdef  int host_params_h_shared_size
 
-host_params_h_start_ptr = cp.cuda.runtime.eventCreate()
-host_params_h_stop_ptr = cp.cuda.runtime.eventCreate()
-host_params_h_start_DLM_ptr = cp.cuda.runtime.eventCreate()
-host_params_h_stop_DLM_ptr = cp.cuda.runtime.eventCreate()
+host_params_h_start = cp.cuda.Event()
+host_params_h_stop = cp.cuda.Event()
+host_params_h_start_DLM = cp.cuda.Event()
+host_params_h_stop_DLM = cp.cuda.Event()
+host_params_h_data_start = cp.cuda.Event()
+host_params_h_data_stop = cp.cuda.Event()
 
-host_params_h_start = cp.cuda.Event(host_params_h_start_ptr)
-host_params_h_stop = cp.cuda.Event(host_params_h_stop_ptr)
-host_params_h_start_DLM = cp.cuda.Event(host_params_h_start_DLM_ptr)
-host_params_h_stop_DLM = cp.cuda.Event(host_params_h_stop_DLM_ptr)
+cdef float host_params_h_elapsedTime
+cdef float host_params_h_elapsedTimeDLM
+cdef float host_params_h_elapsedTimeData
 
-cdef  float host_params_h_elapsedTime
-cdef  float host_params_h_elapsedTimeDLM
-
+host_params_h_iso_d = None
 host_params_h_v0_d = None
 host_params_h_da_d = None
 host_params_h_S0_d = None
@@ -64,6 +62,8 @@ host_params_h_na_d = None
 host_params_h_log_2vMm_d = None
 host_params_h_DLM_d = None
 host_params_h_spectrum_d = None
+host_params_h_Q_d = None
+host_params_h_I_add = None
 
 # defined in 'iterate'
 host_params_h_DLM_d_in = None
@@ -118,7 +118,6 @@ class iterData(ctypes.Structure):
         ("log_rT", ctypes.c_float),
         ("c2T", ctypes.c_float),
         ("N", ctypes.c_float),
-        ("Q", ctypes.c_float),
 
         ("log_wG_min", ctypes.c_float),
         ("log_wL_min", ctypes.c_float),
@@ -167,7 +166,6 @@ struct iterData {
 	float log_rT;
 	float c2T;
     float N;
-	float Q;
 	float log_wG_min;
 	float log_wL_min;
 	float log_dwG;
@@ -179,6 +177,7 @@ __device__ __constant__ initData init_params_d;
 __device__ __constant__ iterData iter_params_d;
 
 __global__ void fillDLM(
+    int* iso,
 	float* v0,
 	float* da,
 	float* S0,
@@ -186,7 +185,9 @@ __global__ void fillDLM(
 	float* log_2gs,
 	float* na,
 	float* log_2vMm,
-	float* global_DLM) {
+	float* global_DLM,
+    float* Q,               // Q is an array of size max(isotopes_id) + 1
+    float* I_add_arr) {
 
 	// Some overhead for "efficient" block allocation:
 	blockData block = iter_params_d.blocks[blockIdx.x + gridDim.x * blockIdx.y];
@@ -240,7 +241,9 @@ __global__ void fillDLM(
                 //arr_idx[i] = iwL0;
 
 				//Calc I
-				float I_add = iter_params_d.N * S0[i] * (expf(iter_params_d.c2T * El[i]) - expf(iter_params_d.c2T * (El[i] + v0[i]))) / logf(10) / iter_params_d.Q;
+				float I_add = iter_params_d.N * S0[i] * (expf(iter_params_d.c2T * El[i]) - expf(iter_params_d.c2T * (El[i] + v0[i]))) / Q[iso[i]];
+
+                I_add_arr[i] = I_add;
 
 				float av = iv - iv0;
 				float awG = (iwG - iwG0) * expf((iwG1 - iwG) * iter_params_d.log_dwG);
@@ -308,7 +311,7 @@ applyLineshapes = cuda_module.get_function('applyLineshapes')
 ####################################
 
 
-cdef void set_pT(float p, float T):
+cdef void set_pT(float p, float T, float mole_fraction):
     
     # ----------- setup global variables -----------------
     global iter_params_h
@@ -321,30 +324,30 @@ cdef void set_pT(float p, float T):
     iter_params_h.hlog_T = 0.5 * np.log(T)
     iter_params_h.log_rT = np.log(296.0/T)
     iter_params_h.c2T = -c2/T
-    iter_params_h.N = p*1e5 / (1e6 * k * T) #cm-3
+    iter_params_h.N = mole_fraction * p*1e5 / (1e6 * k * T) #cm-3
 
     ## TO-DO: These are molecule/isotopologue specific params and should not be compiled
-    cdef float B  = <float>     0.3902 #cm-1
-    cdef float w1 = <float>  1354.31 #cm-1
-    cdef float w2 = <float>   672.85 #cm-1
-    cdef float w3 = <float>  2396.32 #cm-1
+    # cdef float B  = <float>     0.3902 #cm-1
+    # cdef float w1 = <float>  1354.31 #cm-1
+    # cdef float w2 = <float>   672.85 #cm-1
+    # cdef float w3 = <float>  2396.32 #cm-1
 
-    cdef int d1 = 1
-    cdef int d2 = 2
-    cdef int d3 = 1
-    cdef float gr = 0.5
+    # cdef int d1 = 1
+    # cdef int d2 = 2
+    # cdef int d3 = 1
+    # cdef float gr = 0.5
 
-    cdef float Trot = T
-    cdef float Tv12 = T
-    cdef float Tv3  = T
+    # cdef float Trot = T
+    # cdef float Tv12 = T
+    # cdef float Tv3  = T
     
-    cdef float Qr = gr * Trot/(c2 * B)*np.exp(c2*B/(<float>3.0*Trot)) #McDowell 1978
-    cdef float Qv1 = 1 / np.power(1 - np.exp(-c2 * w1 / Tv12), d1)
-    cdef float Qv2 = 1 / np.power(1 - np.exp(-c2 * w2 / Tv12), d2)
-    cdef float Qv3 = 1 / np.power(1 - np.exp(-c2 * w3 / Tv3 ), d3)
-    cdef float Q = Qr * Qv1 * Qv2 * Qv3;
+    # cdef float Qr = gr * Trot/(c2 * B)*np.exp(c2*B/(<float>3.0*Trot)) #McDowell 1978
+    # cdef float Qv1 = 1 / np.power(1 - np.exp(-c2 * w1 / Tv12), d1)
+    # cdef float Qv2 = 1 / np.power(1 - np.exp(-c2 * w2 / Tv12), d2)
+    # cdef float Qv3 = 1 / np.power(1 - np.exp(-c2 * w3 / Tv3 ), d3)
+    # cdef float Q = Qr * Qv1 * Qv2 * Qv3
 
-    iter_params_h.Q = Q
+    #iter_params_h.Q = Q
 
 def read_npy(fname, arr):
     print("Loading {0}...".format(fname))
@@ -418,7 +421,7 @@ cdef void init_lorentzian_params(np.ndarray[dtype=np.float32_t, ndim=1] log_2gs,
 
     try:
         with open(fname, 'rb') as f:
-            print(" (from cache)... ", end="\n")
+            print(" (from cache)... ", end=" ")
             lt = pickle.load(f)
 
             top_size = lt[0]
@@ -441,7 +444,7 @@ cdef void init_lorentzian_params(np.ndarray[dtype=np.float32_t, ndim=1] log_2gs,
             host_params_h_bottom_x = lt[7]
 
     except:
-        print(" ... ", end="\n")
+        print(" ... ", end = " ")
 
         na_len = na.size
         for i in range(na_len):
@@ -560,7 +563,7 @@ cdef void init_lorentzian_params(np.ndarray[dtype=np.float32_t, ndim=1] log_2gs,
         with open(fname, 'wb') as f:
             pickle.dump(lt, f)
     
-    print("Done!")
+    print("done!")
     return
 
 cdef void calc_lorentzian_params():
@@ -610,11 +613,11 @@ cdef void init_gaussian_params(np.ndarray[dtype=np.float32_t, ndim=1] log_2vMm):
     fname = "Gaussian_minmax_" + str(len(log_2vMm)) + ".dat"
     try:
         lt = pickle.load(open(fname, "rb"))
-        print(" (from cache)... ", end="\n")
+        print(" (from cache)... ", end=" ")
         log_2vMm_min = lt[0]
         log_2vMm_max = lt[1]
     except (OSError, IOError) as e:
-        print("... ", end="\n")
+        print("... ", end=" ")
         log_2vMm_min = np.amin(log_2vMm)
         log_2vMm_max = np.amax(log_2vMm)
         lt = [log_2vMm_min, log_2vMm_max]
@@ -623,7 +626,7 @@ cdef void init_gaussian_params(np.ndarray[dtype=np.float32_t, ndim=1] log_2vMm):
     host_params_h_log_2vMm_min = log_2vMm_min
     host_params_h_log_2vMm_max = log_2vMm_max
 
-    print("Done!")
+    print("done!")
 
     return
 
@@ -703,23 +706,39 @@ cdef int prepare_blocks():
     
     return n
 
-def init(v_arr,N_wG,N_wL):
+def init(v_arr,N_wG,N_wL,
+        np.ndarray[dtype=np.int32_t, ndim=1] iso,
+        np.ndarray[dtype=np.float32_t, ndim=1] v0,
+        np.ndarray[dtype=np.float32_t, ndim=1] da,
+        np.ndarray[dtype=np.float32_t, ndim=1] log_2gs,
+        np.ndarray[dtype=np.float32_t, ndim=1] na,
+        np.ndarray[dtype=np.float32_t, ndim=1] log_2vMm,
+        np.ndarray[dtype=np.float32_t, ndim=1] S0,
+        np.ndarray[dtype=np.float32_t, ndim=1] El,
+        np.ndarray[dtype=np.float32_t, ndim=1] Q
+        ):
 
     # ----------- setup global variables -----------------
     global init_params_h
     global host_params_h_dec_size
     global host_params_h_block_preparation_step_size
+    global host_params_h_iso_d
     global host_params_h_v0_d
     global host_params_h_v0_dec
     global host_params_h_da_d
     global host_params_h_da_dec
     global host_params_h_S0_d
     global host_params_h_El_d
+    global host_params_h_Q_d
     global host_params_h_log_2gs_d
     global host_params_h_na_d
     global host_params_h_log_2vMm_d
     global host_params_h_DLM_d_in
     global host_params_h_spectrum_d_in
+    global host_params_h_I_add
+    global host_params_h_data_start
+    global host_params_h_data_stop
+    global host_params_h_elapsedTimeData
     
 
     global cuda_module
@@ -758,86 +777,49 @@ def init(v_arr,N_wG,N_wL):
     print("Spectral points per thread : {0}".format(init_params_h.N_points_per_thread))
     print()
 
-    # init v:
-    print("Init v : ")
-    #init_params_h.Max_lines = int(2.4E8) # this is now done with N_lines_to_load; init_params_h.Max_lines is obsolete.
-
-    print("Loading v0.npy...")
-    cdef np.ndarray[dtype=np.float32_t, ndim=1] v0 = np.load(database_path+'v0.npy')[-N_lines_to_load:]
-    print("Done!")
-    cdef np.ndarray[dtype=np.float32_t, ndim=1] spec_h_v0 = v0
     
-    print("Loading da.npy...")
-    cdef np.ndarray[dtype=np.float32_t, ndim=1] da = np.load(database_path+'da.npy')[-N_lines_to_load:]
-    print("Done!")
+    cdef np.ndarray[dtype=np.int32_t, ndim=1] spec_h_iso = iso
+    cdef np.ndarray[dtype=np.float32_t, ndim=1] spec_h_v0 = v0
     cdef np.ndarray[dtype=np.float32_t, ndim=1] spec_h_da = da
-
     host_params_h_v0_dec = np.zeros(len(v0)//init_params_h.N_threads_per_block, dtype=np.float32)
     for i in range(0, len(v0)//init_params_h.N_threads_per_block):
         host_params_h_v0_dec[i] = v0[i * init_params_h.N_threads_per_block]
-
     host_params_h_dec_size = host_params_h_v0_dec.size
-    
     host_params_h_da_dec = np.zeros(len(v0)//init_params_h.N_threads_per_block, dtype=np.float32)
-    
     for i in range(0, len(v0)//init_params_h.N_threads_per_block):
         host_params_h_da_dec[i] = da[i * init_params_h.N_threads_per_block]
 
-    # wL inits
-    print("Init wL: ")
-    print("Loading log_2gs.npy...")
-    cdef np.ndarray[dtype=np.float32_t, ndim=1] log_2gs = np.load(database_path+'log_2gs.npy')[-N_lines_to_load:]
     cdef np.ndarray[dtype=np.float32_t, ndim=1] spec_h_log_2gs = log_2gs
-    print("Done!")
-
-    print("Loading na.npy...")
-    cdef np.ndarray[dtype=np.float32_t, ndim=1] na = np.load(database_path+'na.npy')[-N_lines_to_load:]
     cdef np.ndarray[dtype=np.float32_t, ndim=1] spec_h_na = na
-    print("Done!")
     init_lorentzian_params(log_2gs, na)
-    print()
-
-    # wG inits:
-    print("Init wG: ")
-    print("Loading log_2vMm.npy...")
-    cdef np.ndarray[dtype=np.float32_t, ndim=1] log_2vMm = np.load(database_path+'log_2vMm.npy')[-N_lines_to_load:]
     cdef np.ndarray[dtype=np.float32_t, ndim=1] spec_h_log_2vMm = log_2vMm
-    print("Done!")
     init_gaussian_params(log_2vMm)
-    print()
-
-    # I inits:
-    print("Init I: ")
-    print("Loading S0.npy...")
-    cdef np.ndarray[dtype=np.float32_t, ndim=1] S0 = np.load(database_path+'S0.npy')[-N_lines_to_load:]
     cdef np.ndarray[dtype=np.float32_t, ndim=1] spec_h_S0 = S0
-    print("Done!")
-
-    print("Loading El.npy...")
-    cdef np.ndarray[dtype=np.float32_t, ndim=1] El = np.load(database_path+'El.npy')[-N_lines_to_load:]
     cdef np.ndarray[dtype=np.float32_t, ndim=1] spec_h_El = El
-    print("Done!")
-    print()
-
+    cdef np.ndarray[dtype=np.float32_t, ndim=1] spec_h_Q = Q
     init_params_h.N_lines = int(len(v0))
     print("Number of lines loaded: {0}".format(init_params_h.N_lines))
     print()
 
     print("Allocating device memory and copying data...")
 
+    host_params_h_data_start.record()
+
     host_params_h_DLM_d_in = cp.zeros((2 * init_params_h.N_v, init_params_h.N_wG, init_params_h.N_wL), order='C', dtype=cp.float32)
     host_params_h_spectrum_d_in = cp.zeros(init_params_h.N_v + 1, dtype=cp.complex64)
+
+    host_params_h_I_add = cp.zeros(init_params_h.N_lines, dtype=cp.float32)
     
-    print("Copying init_params to device...")
+    print("Copying initialization parameters to device memory...", end = " ")
     memptr_init_params_d = cuda_module.get_global("init_params_d")
     init_params_ptr = ctypes.cast(ctypes.pointer(init_params_h),ctypes.c_void_p)
     init_params_size = ctypes.sizeof(init_params_h)
-    print('sizeof p:', init_params_size)
     memptr_init_params_d.copy_from_host(init_params_ptr, init_params_size)
-    print("Done!")
+    print("done!")
 
-    print("Copying spectral data to device...")
+    print("Copying spectral data to device memory...", end = " ")
 	# #Copy spectral data to device
+    host_params_h_iso_d =       cp.array(spec_h_iso)
     host_params_h_v0_d =        cp.array(spec_h_v0)
     host_params_h_da_d =        cp.array(spec_h_da)
     host_params_h_S0_d =        cp.array(spec_h_S0)
@@ -845,22 +827,33 @@ def init(v_arr,N_wG,N_wL):
     host_params_h_log_2gs_d =   cp.array(spec_h_log_2gs)
     host_params_h_na_d =        cp.array(spec_h_na)
     host_params_h_log_2vMm_d =  cp.array(spec_h_log_2vMm)
-    
-    print("Initialization done!")
+    host_params_h_Q_d =         cp.array(spec_h_Q)
+
+    host_params_h_data_stop.record()
+    host_params_h_data_stop.synchronize()
+    host_params_h_elapsedTimeData = cp.cuda.get_elapsed_time(host_params_h_data_start, host_params_h_data_stop)
+    print("done!")
+    print("Initialization complete!")
+
+    print("Time to copy data from host to device = {0} ms".format(host_params_h_elapsedTimeData))
 
 
 
-def iterate(float p, float T):
+def iterate(float p, float T, float mole_fraction,
+            np.ndarray[dtype=np.float32_t, ndim=1] Ia_arr,
+            np.ndarray[dtype=np.float32_t, ndim=1] molarmass_arr):
     
     # ----------- setup global variables -----------------
 
     global host_params_h_start
 
     global init_params_h, iter_params_h
+    global host_params_h_iso
     global host_params_h_v0_d
     global host_params_h_da_d
     global host_params_h_S0_d
     global host_params_h_El_d
+    global host_params_h_Q_d
     global host_params_h_log_2gs_d
     global host_params_h_na_d
     global host_params_h_log_2vMm_d
@@ -870,35 +863,43 @@ def iterate(float p, float T):
     global host_params_h_DLM_d_in
     global host_params_h_spectrum_d_in
 
+    global host_params_h_I_add
+
     global cuda_module
     global host_params_h_v0_dec
     global host_params_h_da_dec
     global DLM
+    global I_ADD
     #------------------------------------------------------
 
-    #host_params_h_start.record()
-    
+    host_params_h_start.record()
+    # test comment
     cdef int n_blocks
-    set_pT(p, T)
+    set_pT(p, T, mole_fraction)
     calc_gaussian_params()
     calc_lorentzian_params()
     n_blocks = prepare_blocks()
 
-    print("Copying iteration parameters to device...")    
+    print("Copying iteration parameters to device...", end = " ")    
     memptr_iter_params_d = cuda_module.get_global("iter_params_d")
     iter_params_ptr = ctypes.cast(ctypes.pointer(iter_params_h),ctypes.c_void_p)
     struct_size = ctypes.sizeof(iter_params_h)
     memptr_iter_params_d.copy_from_host(iter_params_ptr,struct_size)
-    print("Done!")
+    print("done!")
 
 	# Zero DLM:
     host_params_h_DLM_d_in.fill(0)
     host_params_h_spectrum_d_in.fill(0)
 
+    host_params_h_I_add.fill(0)
+
     print("Getting ready...")
+
+    host_params_h_start_DLM.record()
 
     fillDLM ((n_blocks,), (init_params_h.N_threads_per_block,),
         (
+        host_params_h_iso_d,
 		host_params_h_v0_d,
 		host_params_h_da_d,
 		host_params_h_S0_d,
@@ -906,30 +907,34 @@ def iterate(float p, float T):
 		host_params_h_log_2gs_d,
 		host_params_h_na_d,
 		host_params_h_log_2vMm_d,
-		host_params_h_DLM_d_in
+		host_params_h_DLM_d_in,
+        host_params_h_Q_d,
+        host_params_h_I_add
         ))
         
     cp.cuda.runtime.deviceSynchronize()
     
     #This makes the DLM array available in the calling module
     DLM = cp.asnumpy(host_params_h_DLM_d_in)
+    I_ADD = cp.asnumpy(host_params_h_I_add)
     #DLM /= 0.8816117 #difference between current code and benchmark.
-    #host_params_h_DLM_d_in = cp.asarray(DLM)
-    
-    #host_params_h_stop_DLM.record()
-    #cp.cuda.runtime.eventSynchronize(host_params_h_stop_DLM_ptr)
-    #host_params_h_elapsedTimeDLM = cp.cuda.get_elapsed_time(host_params_h_start_DLM, host_params_h_stop_DLM)
-    #print("<<<LAUNCHED>>> ")
+    host_params_h_stop_DLM.record()
+    host_params_h_stop_DLM.synchronize()
+    host_params_h_elapsedTimeDLM = cp.cuda.get_elapsed_time(host_params_h_start_DLM, host_params_h_stop_DLM)
+    print("<<<LAUNCHED>>> ", end = " ")
 
     cp.cuda.runtime.deviceSynchronize()
-	# FFT
-    # figure out how host_params_h_DLM_d_in points to the same memory location as host_params_h_DLM_d
-    
+	
+    #FFT
+    print("Performing Fourier transform...", end= " ")
     host_params_h_DLM_d_out = cp.fft.rfft(host_params_h_DLM_d_in, axis = 0) 
+    print("done!")
     
     cp.cuda.runtime.deviceSynchronize()
     cdef int n_threads = 1024
     n_blocks = (init_params_h.N_v + 1) // n_threads + 1
+
+    print("Applying lineshapes...", end = " ")
 
     applyLineshapes (( n_blocks,), (n_threads,), 
     (
@@ -939,23 +944,25 @@ def iterate(float p, float T):
     )
 
     cp.cuda.runtime.deviceSynchronize()
+    print("done!")
 
 	# inverse FFT
+    print("Performing inverse Fourier transform...", end = " ")
     host_params_h_spectrum_d_out = cp.fft.irfft(host_params_h_spectrum_d_in)
     cp.cuda.runtime.deviceSynchronize()
+    print("done!")
+    spectrum_h = host_params_h_spectrum_d_out.get()[:init_params_h.N_v] / init_params_h.dv
 
-    spectrum_h = host_params_h_spectrum_d_out.get()[:init_params_h.N_v] / init_params_h.dv 
+    host_params_h_stop.record()
+    host_params_h_stop.synchronize()
+    host_params_h_elapsedTime = cp.cuda.get_elapsed_time(host_params_h_start, host_params_h_stop)
 
-    #host_params_h_stop.record()
-    cp.cuda.runtime.eventSynchronize(host_params_h_stop_ptr)
-    #host_params_h_elapsedTime = cp.cuda.get_elapsed_time(host_params_h_start, host_params_h_stop)
-
-    #print("[rG = {0}%".format((np.exp(iter_params_h.log_dwG) - 1) * 100), end = " ")
-    #print("rL = {0}%]".format((np.exp(iter_params_h.log_dwL) - 1) * 100) )
-    #print("Runtime: {0}".format(host_params_h_elapsedTimeDLM))
-    #print(" + {0}".format(host_params_h_elapsedTime - host_params_h_elapsedTimeDLM), end = " ")
-    #print(" = {0} ms".format(host_params_h_elapsedTime))
-
+    print("[rG = {0}%".format((np.exp(iter_params_h.log_dwG) - 1) * 100), end = " ")
+    print("rL = {0}%]".format((np.exp(iter_params_h.log_dwL) - 1) * 100), end = " ")
+    print("Runtime: {0}".format(host_params_h_elapsedTimeDLM), end = "")
+    print(" + {0}".format(host_params_h_elapsedTime - host_params_h_elapsedTimeDLM), end = "")
+    print(" = {0} ms".format(host_params_h_elapsedTime))
+    print("Finished calculating spectrum!")
 
     return spectrum_h
 
